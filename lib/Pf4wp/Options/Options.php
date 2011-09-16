@@ -20,6 +20,8 @@ abstract class Options
 {
     protected $name;
     protected $defaults = array();
+    
+    private $cache = array(); // Non-persistent working memory cache
        
     /**
      * Constructor
@@ -30,7 +32,7 @@ abstract class Options
     public function __construct($name, array $defaults = array())
     {
         $this->name = $name;
-        
+       
         $this->setDefaults($defaults);
     }
     
@@ -51,6 +53,10 @@ abstract class Options
      */
     public function __get($option)
     {
+        // Return cached entry, if present
+        if (isset($this->cache[$option]))
+            return $this->cache[$option];
+            
         $options = $this->get();
         
         $result = null; // Default
@@ -73,6 +79,9 @@ abstract class Options
             }
         }
         
+        // Store into cache
+        $this->cache[$option] = $result;
+
         return $result;
     }
     
@@ -87,8 +96,11 @@ abstract class Options
         $options = $this->get();
 
         $options[$option] = $value;
-        
+                
         $this->set($options);
+        
+        // Invalidate cached entry
+        unset($this->cache[$option]);
     }
     
     /**
@@ -109,8 +121,8 @@ abstract class Options
             if ((array)$default_value === $default_value) { 
                 if ((int)$default_key === $default_key) {
                     // If indexed (multiple entries), ensure each entry has the same default values
-                    for ($i = 0; $i < count($result); $i++)
-                        $result[$i] = $this->array_replace_nested($default_value, $result[$i]);                        
+                    foreach ($result as $result_key => $result_value)
+                        $result[$result_key] = $this->array_replace_nested($default_value, $result_value);
                 } else {
                     $result[$default_key] = $this->array_replace_nested($default_value, $result[$default_key]);
                 }
@@ -119,6 +131,20 @@ abstract class Options
         
         return $result;
     }
+    
+
+    /**
+     * Deletes all options
+     *
+     * @return bool Returns `true` of the options were deleted, `false` otherwise
+     */
+    public function delete()
+    {
+        // Invalidate cache
+        $this->cache = array();
+        
+        return true;
+    }    
     
     /**
      * Obtains options
@@ -134,11 +160,4 @@ abstract class Options
      * @retrn bool Returns `true` if the options were updates, `false` otherwise
      */
     protected abstract function set(array $options);
-
-    /**
-     * Deletes all options
-     *
-     * @return bool Returns `true` of the options were deleted, `false` otherwise
-     */
-    public abstract function delete();
 }
