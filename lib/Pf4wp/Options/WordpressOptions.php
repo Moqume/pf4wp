@@ -39,7 +39,7 @@ class WordpressOptions extends Options
      * Saves options
      *
      * @param array $options Options to save
-     * @retrn bool Returns true if the options were updates, false otherwise
+     * @retrn bool Returns `true` if the options were updates, `false` otherwise
      */
     protected function set(array $options)
     {
@@ -51,7 +51,7 @@ class WordpressOptions extends Options
     /**
      * Deletes all options
      *
-     * @return bool Returns true of the options were deleted, false otherwise
+     * @return bool Returns `true` of the options were deleted, `false` otherwise
      */
     public function delete()
     {

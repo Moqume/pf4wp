@@ -30,6 +30,12 @@ abstract class Options
     public function __construct($name, array $defaults = array())
     {
         $this->name = $name;
+        
+        $this->setDefaults($defaults);
+    }
+    
+    public function setDefaults(array $defaults)
+    {
         $this->defaults = $defaults;
     }
     
@@ -71,10 +77,25 @@ abstract class Options
     }
     
     /**
+     * Set magic for options
+     * 
+     * @param string $option Option to set
+     * @param mixed $value Value to assign to the option
+     */
+    public function __set($option, $value)
+    {
+        $options = $this->get();
+
+        $options[$option] = $value;
+        
+        $this->set($options);
+    }
+    
+    /**
      * Replaces nested arrays based on a default array.
      *
      * @param array $default Array containing default array elements
-     * @param arrat $set Array containing array elements that need to have at least the same
+     * @param arrat $set Array containing elements that need to have at least the same
      *   elements as the default array.
      */
     private function array_replace_nested(array $defaults, array $set)
@@ -99,21 +120,6 @@ abstract class Options
         return $result;
     }
     
-    /**
-     * Set magic for options
-     * 
-     * @param string $option Option to set
-     * @param mixed $value Value to assign to the option
-     */
-    public function __set($option, $value)
-    {
-        $options = $this->get();
-
-        $options[$option] = $value;
-        
-        $this->set($options);
-    }
-       
     /**
      * Obtains options
      *
