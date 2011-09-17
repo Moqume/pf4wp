@@ -86,9 +86,6 @@ if (($_pf4wp_old_php = version_compare(PHP_VERSION, $_pf4wp_version_check_php, '
 
 /* UCL */
 
-use Symfony\Component\ClassLoader\UniversalClassLoader;
-use Symfony\Component\ClassLoader\ApcUniversalClassLoader;
-
 if (!class_exists('Symfony\Component\ClassLoader\UniversalClassLoader'))
     require_once __DIR__.'/../vendor/Symfony/Component/ClassLoader/UniversalClassLoader.php';
 
@@ -99,9 +96,9 @@ if (extension_loaded('apc')) {
     if (!class_exists('Symfony\Component\ClassLoader\ApcUniversalClassLoader'))
         require_once __DIR__.'/../vendor/Symfony/Component/ClassLoader/ApcUniversalClassLoader.php';
 
-    $_pf4wp_ucl = new ApcUniversalClassLoader('myatu.ucl.');
+    $_pf4wp_ucl = new Symfony\Component\ClassLoader\ApcUniversalClassLoader('myatu.ucl.');
 } else {
-    $_pf4wp_ucl = new UniversalClassLoader();
+    $_pf4wp_ucl = new Symfony\Component\ClassLoader\UniversalClassLoader();
 }
 
 /* Cleanup */

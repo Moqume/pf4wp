@@ -74,7 +74,7 @@ class WordpressPlugin
      */
     protected function __construct()
     {
-        $plugin_file = self::getPluginFileOnInit();
+        $plugin_file = self::getPluginFile();
         
         if (empty($plugin_file))
             return;
@@ -84,16 +84,69 @@ class WordpressPlugin
         
         // Options handlers
         $this->options = new WordpressOptions($this->name, $this->default_options);
-        $this->internal_options = new WordpressOptions('_' . $this->name, $this->default_internal_options); // Internal
-        
+        $this->internal_options = new WordpressOptions('_' . $this->name, $this->default_internal_options); // Internal            
+            
         // Load locales
         $locale = get_locale();
         if ( !empty($locale) ) {
             $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $this->name . '-' . $locale . '.mo';	
             if ( @file_exists($mofile) && @is_readable($mofile) )
                 load_textdomain($this->name, $mofile);
-        }
-               
+        }       
+        
+        // Register Uninstall hook
+        register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
+    }
+    
+    /**
+     * Destructor
+     */
+    public function __destruct()
+    {
+        restore_exception_handler();
+    }
+    
+    /*---------- Helpers ----------*/
+    
+    /**
+     * Return an instance of the plugin, optionally creating one if non-existing
+     *
+     * @param bool $no_auto_register If set to true, do not automatically register hooks and filters that provide full functionality/events
+     * @return WordpressPlugin instance
+     */
+    final public static function instance($no_auto_register = false)
+    {
+        $class = get_called_class();
+
+        if (!array_key_exists($class, self::$instances))
+            self::$instances[$class] = new $class;
+        
+        if (empty($no_auto_register))
+            self::$instances[$class]->register_actions();
+
+        return self::$instances[$class];
+    }    
+    
+    /**
+     * Registers the plugin with WordPress
+     */
+    final public static function register()
+    {
+        self::instance(true);
+        
+        add_action('init', get_called_class() . '::instance', 10, 0);
+    }
+    
+    /**
+     * Registers all actions, hooks and filters to provide full functionality/event triggers
+     *
+     * @see construct()
+     */
+    public function register_actions()
+    {
+        if ($this->registered)
+            return;
+            
         // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
         $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
        
@@ -121,52 +174,7 @@ class WordpressPlugin
         } else {
             // Provide a safe fallback
             $this->template = new NullEngine();
-        }        
-    }
-    
-    /**
-     * Destructor
-     */
-    public function __destruct()
-    {
-        restore_exception_handler();
-    }
-    
-    /*---------- Helpers ----------*/
-    
-    /**
-     * Return an instance of the plugin, optionally creating one if non-existing
-     *
-     * Example:
-     * <code>
-     * add_action('init', 'My\Plugin::instance', 10, 0);
-     * </code>
-     *
-     * @param bool $no_auto_register If set to true, do not automatically register hooks and filters that provide full functionality/events
-     * @return WordpressPlugin instance
-     */
-    final public static function instance($no_auto_register = false)
-    {
-        $class = get_called_class();
-
-        if (!array_key_exists($class, self::$instances))
-            self::$instances[$class] = new $class;
-        
-        if (empty($no_auto_register))
-            self::$instances[$class]->register();
-
-        return self::$instances[$class];
-    }    
-    
-    /**
-     * Registers all hooks and filters to provide full functionality/event triggers
-     *
-     * @see construct()
-     */
-    public function register()
-    {
-        if ($this->registered)
-            return;
+        }            
     
         /* A note on the use of "$this" versus the often seen "&$this": In PHP5 a copy of the object is 
          * only returned when using "clone". Also, for other use of references, the Zend Engine employs 
@@ -174,10 +182,9 @@ class WordpressPlugin
          * it's actually written to. Do not circumvent Zend's optimizations!
          */
         
-        // (De)activation and uninstall events
+        // (De)activation events
         register_activation_hook(plugin_basename($this->plugin_file), array($this, '_onActivation'));
         register_deactivation_hook(plugin_basename($this->plugin_file), array($this, 'onDeactivation'));
-        register_uninstall_hook(plugin_basename($this->plugin_file), get_class($this) . '::_onUninstall'); // Static method
         
         // Internal and Admin events
         add_action('admin_menu', array($this, '_onAdminRegister'));
@@ -198,7 +205,7 @@ class WordpressPlugin
         // Done!
         $this->registered = true;
     }
-    
+
     /**
      * Internal: Obtains the core filename of the plugin during initialization
      *
@@ -210,7 +217,7 @@ class WordpressPlugin
      *
      * @return string Plugin filename or `null` if invalid
      */
-    private static function getPluginFileOnInit()
+    private static function getPluginFile()
     {
         $included_files = get_included_files();
         
@@ -415,7 +422,7 @@ class WordpressPlugin
         $this_instance = static::instance(true);
 
         // Clear the managed cache
-        $this->clearCache();
+        $this_instance->clearCache();
 
         // Delete our options from the WP database
         $this_instance->options->delete();
