@@ -36,7 +36,7 @@ class AdminNotice
 
         $class = ($is_error) ? 'error' : 'updated';
         
-        static::$notices[] = '<div id="message" class="' . $class . '"><p>' . $message . '</p></div>';
+        static::$notices[] = sprintf('<div id="message" class="%s"><p>%s</p></div>', $class, $message);
     }
     
     /**

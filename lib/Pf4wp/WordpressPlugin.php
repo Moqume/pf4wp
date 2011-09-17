@@ -62,7 +62,7 @@ class WordpressPlugin
     /**
      * The default options for the plugin, if any
      */
-    protected $default_options;
+    protected $default_options = array();
         
     /**
      * Constructor (Protected; use instance())
@@ -201,7 +201,7 @@ class WordpressPlugin
      * It is OK to call other includes before the plugin is constructed, provided the plugin 
      * follows the standard naming convention of `(plugin-base/)plugin-name/plugin-name.php`.
      *
-     * @return string Plugin filename or NULL if invalid
+     * @return string Plugin filename or `null` if invalid
      */
     private static function getPluginFileOnInit()
     {
@@ -261,7 +261,7 @@ class WordpressPlugin
     /**
      * Get the URL of the main menu entry
      *
-     * @return string|bool URL, or false if invalid.
+     * @return string|bool URL, or `false` if invalid.
      */
     public function getParentMenuUrl()
     {
@@ -281,8 +281,8 @@ class WordpressPlugin
      * placed after this function will not be executed.
      *
      * @param mixed|string $data The data to return, or an error string as the message 
-     *		to be displayed if $is_error is true
-     * @param bool $is_error Optional parameter that if set to true will create an 
+     *		to be displayed if $is_error parameter is set to `true`
+     * @param bool $is_error Optional parameter that if set to `true` will create an 
      *		AJAX error response (uses $data as the error string)
      */
     public function ajaxResponse($data, $is_error = false) {       
@@ -688,7 +688,7 @@ class WordpressPlugin
     /**
      * Event called to build a custom menu
      * 
-     * @return MenuEntry|string|bool Returns a MenuEntry, a string for a hook, or false if invalid
+     * @return MenuEntry|string|bool Returns a MenuEntry, a string for a hook, or `false` if invalid
      */
     public function onBuildMenu()
     {

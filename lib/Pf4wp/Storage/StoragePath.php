@@ -10,7 +10,6 @@
 namespace Pf4wp\Storage;
 
 use Pf4wp\WordpressPlugin;
-use Pf4wp\Storage\IgnorantRecursiveDirectoryIterator;
 
 /**
  * The StoragePath Class encapsulates some common function to work with
@@ -32,7 +31,7 @@ class StoragePath
     /**
      * Initialize the WP Filesystem
      *
-     * @return bool Returns true if initialization was successful, false otherwise
+     * @return bool Returns `true` if initialization was successful, `false` otherwise
      */
     private static function initWPFilesystem()
     {
@@ -65,7 +64,7 @@ class StoragePath
      *
      * @param string $path Path to validate  
      * @param bool $is_private If set to true (default), the directory and sub-directories will be marked as private (Optional)
-     * @return string|bool Returns the validated path if successful, false otherwise
+     * @return string|bool Returns the validated path if successful, `false` otherwise
      */    
     public static function validate($path, $is_private = true)
     {
@@ -136,7 +135,7 @@ class StoragePath
      * specified path and optionally all its sub-directories. 
      *
      * @param string $path Path to the directory to mark as private
-     * @param bool $recursive If true, also make the sub-directories private (Optional, default is true)
+     * @param bool $recursive If `true`, also make the sub-directories private (Optional, default is `true`)
      */    
     public static function makePrivate($path, $recursive = true)
     {
@@ -178,8 +177,8 @@ class StoragePath
      * This will delete all files contained within the path
      *
      * @param string $path Path to the directory to delete
-     * @param bool $recursive If true, delete all sub-directories (Optional, default is true)
-     * @return bool Returns true if the path could be deleted entirely, false otherwise (path has remnants)
+     * @param bool $recursive If `true`, delete all sub-directories (Optional, default is `true`)
+     * @return bool Returns `true` if the path could be deleted entirely, `false` otherwise (path has remnants)
      */
     public static function delete($path, $recursive = true)
     {

@@ -9,8 +9,6 @@
 
 namespace Pf4wp\Menu;
 
-use Pf4wp\Menu\MenuEntry;
-
 /**
  * StandardMenu provides a single stand-alone menu entry with submenus.
  *
@@ -39,7 +37,7 @@ class StandardMenu
     /**
      * Constructor
      */
-    public function __construct($id)
+    public function __construct($id = '')
     {
         if (!empty($id))
             $this->id = $id;
@@ -51,7 +49,7 @@ class StandardMenu
      *
      * Note: This returns as soon as *any* of the menus have been displayed.
      *
-     * @return bool True if the menu has been displayed, false otherwise
+     * @return bool `True` if the menu has been displayed, `false` otherwise
      */
     public function isDisplayed()
     {
@@ -78,7 +76,7 @@ class StandardMenu
     /**
      * Returns the active menu entry
      *
-     * @return MenuEntry|bool active menu item, false if invalid
+     * @return MenuEntry|bool active menu item, `false` if invalid
      */
     public function getActiveMenu()
     {
@@ -109,7 +107,7 @@ class StandardMenu
     /**
      * Returns the hook of the parent menu entry
      *
-     * @return string|bool WordPress provided hook, false if invalid.
+     * @return string|bool WordPress provided hook, `false` if invalid.
      */
     public function getParentHook()
     {
@@ -218,7 +216,7 @@ class StandardMenu
      * @param string $page_title The page title to display on a rendered page (Optional, menu entry title by default)
      * @param string $icon A small icon displayed next to the menu entry, if supported (Optional, none by default)
      * @param string $large_icon The CSS ID or URL of a large icon to display on the rendered page (Optional, CSS ID 'icon-general-option' by default)
-     * @param bool $is_submenu Set to true if this is a submenu entry (False by default)
+     * @param bool $is_submenu Set to `true` if this is a submenu entry (`False` by default)
      */
     public function addMenu($title, $callback, $callback_args = false, $count = false, $context_help = '', $page_title = '', $icon = '', $large_icon = '', $is_submenu = false)
     {
@@ -281,7 +279,7 @@ class StandardMenu
     /**
      * Renders (displays) all the menu entries in the WordPress Dashboard
      *
-     * @return bool Returns true if displaying the menu was successful, false otherwise
+     * @return bool Returns `true` if displaying the menu was successful, `false` otherwise
      */
     public function display()
     {

@@ -152,7 +152,7 @@ class Widget extends \WP_Widget
      * Event triggered when the settings for this widget are to be changed
      *
      * @see update()
-     * @param array $new_instance New settings for this instance as input by the user via onRenderFrm()
+     * @param array $new_instance New settings for this instance as input by the user via onRenderForm()
      * @param array $old_instance Old settings for this instance
      * @return array Settings to save or bool false to cancel saving
      */

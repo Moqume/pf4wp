@@ -52,7 +52,7 @@ abstract class Metabox
      * Constructor
      *
      * @param WordpressPlugin $owner Owner of this Metabox
-     * @param bool $auto_register Set to true if the meta-box can be registered immidiately during construction
+     * @param bool $auto_register Set to `true` if the meta-box can be registered immidiately during construction
      */
     public function __construct($owner, $auto_register = true)
     {

@@ -9,9 +9,6 @@
 
 namespace Pf4wp\Menu;
 
-use Pf4wp\Menu\MenuEntry;
-use Pf4wp\Menu\StandardMenu;
-
 /**
  * CombinedMenu provides a stand-alone menu with submenus and page subheaders.
  *
@@ -29,7 +26,7 @@ class CombinedMenu extends StandardMenu
     /**
      * Constructor
      */
-    public function __construct($id)
+    public function __construct($id = '')
     {
         parent::__construct($id);
         
@@ -49,7 +46,7 @@ class CombinedMenu extends StandardMenu
     /**
      * Returns the active menu entry
      *
-     * @return MenuEntry|bool active menu item, false if invalid
+     * @return MenuEntry|bool active menu item, `false` if invalid
      */
     public function getActiveMenu()
     {
@@ -72,7 +69,7 @@ class CombinedMenu extends StandardMenu
      * This differens from obtaining the active menu, as this will also include the 
      * submenus and is used to display the right subheaders for the displayed (sub)menu.
      *
-     * @return string|bool Slug for the active parent menu, false if invalid
+     * @return string|bool Slug for the active parent menu, `false` if invalid
      */
     public function getActiveParentSlug()
     {
@@ -104,7 +101,7 @@ class CombinedMenu extends StandardMenu
      * @param string $page_title The page title to display on a rendered page (Optional, menu entry title by default)
      * @param string $icon A small icon displayed next to the menu entry, if supported (Optional, none by default)
      * @param string $large_icon The CSS ID or URL of a large icon to display on the rendered page (Optional, CSS ID 'icon-general-option' by default)
-     * @param bool $is_submenu Set to true if this is a submenu entry (False by default)
+     * @param bool $is_submenu Set to true if this is a submenu entry (`False` by default)
      * @return MenuEntry Reference to the menu entry
      */
     public function addMenu($title, $callback, $callback_args = false, $count = false, $context_help = '', $page_title = '', $icon = '', $large_icon = '', $is_submenu = false)
@@ -130,7 +127,7 @@ class CombinedMenu extends StandardMenu
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optional, none by default)
      * @param bool|int $count A count that is displayed next to the menu entry, or false for none (Optional, none by default)
      * @param string $context_help String continaing context help (Optional, none by default)
-     * @return MenuEntry Reference to the menu entry, false if invalid.
+     * @return MenuEntry Reference to the menu entry, `false` if invalid.
      */
     public function addSubHeader(&$parent_menu, $title, $callback, $callback_args = false, $count = false, $context_help = '')
     {
@@ -150,7 +147,7 @@ class CombinedMenu extends StandardMenu
      *
      * @param MenuEntry $menu Menu entry to test
      * @param string $title Reference to title that should be displayed if this function returns true
-     * @return bool Returns true if the menu should be displayed, false otherwise
+     * @return bool Returns `true` if the menu should be displayed, `false` otherwise
      */
     public function doRenderSubHeader($menu, &$title)
     {
@@ -174,7 +171,7 @@ class CombinedMenu extends StandardMenu
      *
      * This event is triggered by a menu entry's 'before_callback'. It will 
      * return a callback if it is different than the original callback (due to 
-     * active page selection), or NULL otherwise
+     * active page selection), or `null` otherwise
      *
      * @return mixed
      */     

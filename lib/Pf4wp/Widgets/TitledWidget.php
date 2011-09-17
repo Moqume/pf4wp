@@ -9,8 +9,6 @@
 
 namespace Pf4wp\Widgets;
 
-use Pf4wp\Widgets\Widget;
-
 /**
  * Adds a user-definable title to the base Widget class
  *
@@ -53,11 +51,11 @@ class TitledWidget extends Widget
         if ($instance) {
             $title = esc_attr($instance['title']);
         } else {
-            $title = __('New title', 'text_domain');
+            $title = __('New title', $this->owner->getName());
         }
 
-        echo '<p><label for="' . $this->get_field_id('title') .'">'. __('Title:') .'</label>';
-        echo '<input class="widefat" id="' . $this->get_field_id('title') . '" name="' . $this->get_field_name('title') . '" type="text" value="' . $title . '" /></p>';
+        printf('<p><label for="%s">%s</label>', $this->get_field_id('title'), __('Title:', $this->owner->getName()));
+        printf('<input class="widefat" id="%s" name="%s" type="text" value="%s" /></p>', $this->get_field_id('title'), $this->get_field_name('title'), $title);
         
         parent::onBeforeFormRender($instance);
     }

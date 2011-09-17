@@ -9,8 +9,6 @@
 
 namespace Pf4wp\Options;
 
-use Pf4wp\WordpressPlugin;
-
 /**
  * Options provides an abstract class for standard option storage facilities.
  *
@@ -34,6 +32,9 @@ abstract class Options
         $this->name = $name;
        
         $this->setDefaults($defaults);
+        
+        // Invalidate cache
+        $this->cache = array();
     }
     
     public function setDefaults(array $defaults)
@@ -69,8 +70,9 @@ abstract class Options
                 // The default is an array, and so should the result be
                 if (empty($result)) {
                     $result = array();
-                } else if ((array)$result !== $result)
+                } else if ((array)$result !== $result) {
                     $result = array($result);
+                }
                 
                 // Ensure nested arrays are the same as the default
                 $result = $this->array_replace_nested($default, $result);
@@ -88,6 +90,8 @@ abstract class Options
     /**
      * Set magic for options
      * 
+     * Setting the value to `null` will delete the particular option
+     *
      * @param string $option Option to set
      * @param mixed $value Value to assign to the option
      */
@@ -95,7 +99,11 @@ abstract class Options
     {
         $options = $this->get();
 
-        $options[$option] = $value;
+        if ($value == null) {
+            unset($options[$option]);
+        } else {
+            $options[$option] = $value;
+        }
                 
         $this->set($options);
         

@@ -9,8 +9,6 @@
 
 namespace Pf4wp\Meta;
 
-use Pf4wp\Meta\Metabox;
-
 /**
  * The PostMetabox class adds an easy to use meta box to post or page edit pages
  *
@@ -42,7 +40,7 @@ class PostMetabox extends Metabox
      * @param int $id Post or Link ID
      * @param string $field Field name for the meta object
      * @param mixed $data Data to associate with the meta object
-     * @return bool Returns true if successful, false otherwise
+     * @return bool Returns `true` if successful, `false` otherwise
      */
     public function setSinglePostMeta($id, $field, $data)
     {

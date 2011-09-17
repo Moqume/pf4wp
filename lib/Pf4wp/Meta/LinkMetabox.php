@@ -9,8 +9,6 @@
 
 namespace Pf4wp\Meta;
 
-use Pf4wp\Meta\Metabox;
-
 /**
  * The LinkMetabox class adds an easy to use meta box to link edit/add pages
  *

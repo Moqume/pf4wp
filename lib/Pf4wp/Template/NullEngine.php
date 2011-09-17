@@ -10,7 +10,7 @@
 namespace Pf4wp\Template;
 
 /**
- * NullEngine provides a template engine that does nothing (eq. NULL)
+ * NullEngine provides a template engine that does nothing (hence `null`)
  *
  * @author Mike Green <myatus@gmail.com>
  */

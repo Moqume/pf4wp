@@ -9,9 +9,6 @@
 
 namespace Pf4wp\Menu;
 
-use Pf4wp\Menu\MenuEntry;
-use Pf4wp\Menu\CombinedMenu;
-
 /**
  * SubHeadMenu provides a single menu entry, with submenus as page subheaders.
  *
@@ -61,7 +58,7 @@ class SubHeadMenu extends CombinedMenu
      *
      * @param MenuEntry $menu Menu entry to test
      * @param string $title Reference to title that should be displayed if this function returns true
-     * @return bool Returns true if the menu should be displayed, false otherwise
+     * @return bool Returns `true` if the menu should be displayed, `false` otherwise
      */
     public function doRenderSubHeader($menu, &$title)
     {

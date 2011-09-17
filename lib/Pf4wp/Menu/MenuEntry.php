@@ -73,7 +73,7 @@ class MenuEntry
     }
     
     /**
-     * Returns the hook for this menu as provided by WordPress, false if invalid.
+     * Returns the hook for this menu as provided by WordPress, `false` if invalid.
      *
      * @return string|bool
      */
@@ -136,7 +136,7 @@ class MenuEntry
     /**
      * Displays the menu entry on the WordPress Dashboard
      *
-     * @return bool Returns true if successful, false otherwise.
+     * @return bool Returns `true` if successful, `false` otherwise.
      */
     public function display()
     {

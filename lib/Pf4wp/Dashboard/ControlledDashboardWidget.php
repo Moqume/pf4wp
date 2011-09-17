@@ -9,8 +9,6 @@
 
 namespace Pf4wp\Dashboard;
 
-use Pf4wp\WordpressPlugin;
-
 /**
  * ControlledDashboardWidget adds Controls to a standard Dashboard Widget
  *
