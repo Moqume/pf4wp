@@ -56,8 +56,20 @@ class PluginInfo
     {
         // Create cached data for installed plugins if there's none yet:
         if ( !isset(self::$installed_plugins) ) {
-            require_once( ABSPATH . '/wp-admin/includes/admin.php' );
-            self::$installed_plugins = get_plugins();
+            if (!function_exists('get_plugins'))
+                include_once ABSPATH . '/wp-admin/includes/admin.php';
+            
+            // Double check before calling get_plugins()
+            if (function_exists('get_plugins')) {
+                self::$installed_plugins = get_plugins();
+            } else {
+                // get_plugins() is not available to us, return empty handed...
+                if ($field) {
+                    return '';
+                } else {
+                    return array();
+                }
+            }
         }
         
         $result = self::$installed_plugins;

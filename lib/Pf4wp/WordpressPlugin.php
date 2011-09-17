@@ -97,7 +97,7 @@ class WordpressPlugin
         // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
         $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
        
-        if (($previous_version = $this->internal_options->version) != $current_version) {
+        if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
             $this->internal_options->version = $current_version;
             
             $this->clearCache(); // May be called twice with onActication(), but is here to prevent any potential issues if not called
@@ -137,19 +137,24 @@ class WordpressPlugin
     /**
      * Return an instance of the plugin, optionally creating one if non-existing
      *
-     * @param bool $auto_register Automatically register all hooks and filters to provide full functionality/events
+     * Example:
+     * <code>
+     * add_action('init', 'My\Plugin::instance', 10, 0);
+     * </code>
+     *
+     * @param bool $no_auto_register If set to true, do not automatically register hooks and filters that provide full functionality/events
      * @return WordpressPlugin instance
      */
-    final public static function instance($auto_register = true)
+    final public static function instance($no_auto_register = false)
     {
         $class = get_called_class();
-        
+
         if (!array_key_exists($class, self::$instances))
             self::$instances[$class] = new $class;
         
-        if ($auto_register)
+        if (empty($no_auto_register))
             self::$instances[$class]->register();
-            
+
         return self::$instances[$class];
     }    
     
@@ -407,7 +412,7 @@ class WordpressPlugin
      */
     final public static function _onUninstall()
     {
-        $this_instance = static::instance(false);
+        $this_instance = static::instance(true);
 
         // Clear the managed cache
         $this->clearCache();
@@ -468,7 +473,10 @@ class WordpressPlugin
         $text = $this->onAfterPluginText();
         
         if ( !empty($text) )
-            echo '<tr><td colspan="3"><div style="-moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; border:1px solid #DFDFDF; background-color:#F1F1F1; margin:5px; padding:3px 5px;">' . $text . '</div></td></tr>';
+            printf(
+                '<tr><td colspan="3"><div style="-moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; border:1px solid #DFDFDF; background-color:#F1F1F1; margin:5px; padding:3px 5px;">%s</div></td></tr>', 
+                $text
+            );
     }
     
     /**
@@ -484,7 +492,12 @@ class WordpressPlugin
         $url = $this->getParentMenuUrl();
         
         if ( !empty($url) )
-            array_unshift($actions, '<a href="' . $url .'" title="' . __('Configure this plugin', $this->name) . '">' . __('Settings', $this->name) . '</a>');
+            array_unshift($actions, sprintf(
+                '<a href="%s" title="%s">%s</a>', 
+                $url,  
+                __('Configure this plugin', $this->name), 
+                __('Settings', $this->name))
+            );
             
         return $actions; 
     }
