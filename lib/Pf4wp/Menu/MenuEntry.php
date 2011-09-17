@@ -293,10 +293,10 @@ class MenuEntry
         if (!empty($this->menu_properties['large_icon'])) {
             if ( strpos($this->menu_properties['large_icon'], '/') === false ) {
                 // Use an icon by CSS ID
-                $icon = 'id="' . $this->menu_properties['large_icon'] . '"';
+                $icon = sprintf('id="%s"', $this->menu_properties['large_icon']);
             } else {
                 // Property contains a URL
-                $icon = 'style="background: url(' . $this->menu_properties['large_icon'] . ') no-repeat scroll center center transparent"';
+                $icon = sprintf('style="background: url(\'%s\') no-repeat scroll center center transparent"', $this->menu_properties['large_icon']);
             }
         }
         printf('<div class="icon32" %s><br /></div>', (isset($icon)) ? $icon : 'id="icon-options-general"');
