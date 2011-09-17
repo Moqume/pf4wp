@@ -290,22 +290,19 @@ class MenuEntry
         echo '<div class="wrap">';
         
         // Render large icon
-        echo '<div class="icon32" '; // <...
-        if ( empty($this->menu_properties['large_icon']) ) {
-            echo 'id="icon-options-general">';
-        } else {
+        if (!empty($this->menu_properties['large_icon'])) {
             if ( strpos($this->menu_properties['large_icon'], '/') === false ) {
                 // Use an icon by CSS ID
-                echo 'id="' . $this->menu_properties['large_icon'] . '">'; // ...>
+                $icon = 'id="' . $this->menu_properties['large_icon'] . '"';
             } else {
                 // Property contains a URL
-                echo 'style="background: url(' . $this->menu_properties['large_icon'] . ') no-repeat scroll center center transparent">'; // ...>
+                $icon = 'style="background: url(' . $this->menu_properties['large_icon'] . ') no-repeat scroll center center transparent"';
             }
         }
-        echo '<br /></div>';
+        printf('<div class="icon32" %s><br /></div>', (isset($icon)) ? $icon : 'id="icon-options-general"');
 
         // Render title
-        echo '<h2>'.$this->menu_properties['page_title'].'</h2>';
+        printf('<h2>%s</h2>', $this->menu_properties['page_title']);
         
         // Perform 'before_callback' event
         if ( !empty($this->menu_properties['before_callback']) ) {
