@@ -17,7 +17,7 @@ if (!isset($_pf4wp_file) || array_shift(explode('/', plugin_basename(str_replace
  * Admin/Dashboard area, or silently return otherwise.
  *
  * If the checks pass, it will set the variable $_pf4wp_check_pass 
- * to `true` and will have a variable $_pf4wp_ucl containing the UCL 
+ * to `true` and will set a variable $_pf4wp_ucl containing the UCL 
  * (UniversalClassLoader) instance.
  *
  * Before calling this include file, please set the variable $_pf4wp_file
@@ -34,6 +34,7 @@ global $wp_version;
 /* Clear any previous variable set */
 
 unset($_pf4wp_check_pass);
+unset($_pf4wp_ucl);
 
 /* Version Check - THIS PORTION MUST BE PHP4 COMPATIBLE.*/
 

@@ -424,7 +424,7 @@ class WordpressPlugin
      */
     final public static function _onUninstall()
     {
-        $this_instance = static::instance('', false);
+        $this_instance = self::instance('', false);
 
         // Clear the managed cache
         $this_instance->clearCache();
@@ -486,7 +486,7 @@ class WordpressPlugin
         
         if ( !empty($text) )
             printf(
-                '<tr><td colspan="3"><div style="-moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; border:1px solid #DFDFDF; background-color:#F1F1F1; margin:5px; padding:3px 5px;">%s</div></td></tr>', 
+                '<tr class="active"><th></th><td colspan="2"><div class="plugin-description" style="padding: 0 0 5px;"><em>%s</em></div></td></tr>',
                 $text
             );
     }
@@ -517,6 +517,10 @@ class WordpressPlugin
     /**
      * Admin loader event called when the selected page is about to be rendered - Stage 2
      *
+     * This will render the contextual help, based on the selected menu. If the menu callback
+     * has a matching 'Before' method, it will be called too, containing the current screen
+     * as an argument.
+     *
      * @see onAdminLoad()
      */
     final public function _onAdminLoad()
@@ -529,12 +533,30 @@ class WordpressPlugin
 
         $current_screen = get_current_screen();
         
-        // Set contextual help - this is not handled by the menu directly
         if ($this->menu instanceof StandardMenu && ($active_menu = $this->menu->getActiveMenu()) !== false) {
             $context_help = $active_menu->context_help;
-            
+
+            // Set contextual help - this is not handled by the menu directly
             if (!empty($context_help))
-                add_contextual_help($current_screen, $context_help);
+                add_contextual_help($current_screen, $context_help);            
+            
+            // Test if there's a method to call before the callback (this differs from MenuEntry->before_callback!)
+            $before_callback = false;
+                
+            if (is_array($active_menu->callback) && is_object($active_menu->callback[0])) {
+                $before_callback_method = $active_menu->callback[1] . 'Before';
+                
+                if (method_exists($active_menu->callback[0], $before_callback_method))
+                    $before_callback = array($active_menu->callback[0], $before_callback_method);
+            } else if (is_string($active_menu->callback)) {
+                $before_callback_function = $active_menu->callback . 'Before';
+                
+                if (function_exists($before_callback_function))
+                    $before_callback = $before_callback_function;
+            }
+            
+            if ($before_callback)
+                call_user_func($before_callback, $current_screen);
         }
 
         $this->onAdminLoad($current_screen);
