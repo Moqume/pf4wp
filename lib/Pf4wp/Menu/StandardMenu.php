@@ -13,6 +13,8 @@ namespace Pf4wp\Menu;
  * StandardMenu provides a single stand-alone menu entry with submenus.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Menu
  */
 class StandardMenu
 {
@@ -135,6 +137,7 @@ class StandardMenu
      * @see \Myatu\WordPress\Plugin\Menu\MenuEntry
      * @see getType()
      * @param int $new_type The new type to set the menu entries to
+     * @throws \Exception if the menu does not support the type requested, or has already been displayed
      */
     public function setType($new_type)
     {
@@ -173,7 +176,9 @@ class StandardMenu
      * http://codex.wordpress.org/Roles_and_Capabilities for details.
      *
      * @see getCapability()
+     * @link http://codex.wordpress.org/Roles_and_Capabilities
      * @param string $new_capability Capability as defined by WordPress
+     * @throws \Exception if the menu has already been displayed.
      */
     public function setCapability($new_capability)
     {
@@ -217,6 +222,7 @@ class StandardMenu
      * @param string $icon A small icon displayed next to the menu entry, if supported (Optional, none by default)
      * @param string $large_icon The CSS ID or URL of a large icon to display on the rendered page (Optional, CSS ID 'icon-general-option' by default)
      * @param bool $is_submenu Set to `true` if this is a submenu entry (`False` by default)
+     * @throws \Exception if the specified menu is a submenu, without having added a main menu.
      */
     public function addMenu($title, $callback, $callback_args = false, $count = false, $context_help = '', $page_title = '', $icon = '', $large_icon = '', $is_submenu = false)
     {

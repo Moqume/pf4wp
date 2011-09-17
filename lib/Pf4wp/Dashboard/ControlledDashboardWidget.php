@@ -13,6 +13,8 @@ namespace Pf4wp\Dashboard;
  * ControlledDashboardWidget adds Controls to a standard Dashboard Widget
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Dashboard
  */
 class ControlledDashboardWidget extends DashboardWidget
 {

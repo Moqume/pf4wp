@@ -17,6 +17,8 @@ use Pf4wp\WordpressPlugin;
  * See wp-includes/widgets.php for \WP_Widget details
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Widgets
  */
 class Widget extends \WP_Widget
 {

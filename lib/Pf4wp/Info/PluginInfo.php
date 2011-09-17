@@ -13,6 +13,8 @@ namespace Pf4wp\Info;
  * Class providing detailed information about WordPress plugins
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Info
  */
 class PluginInfo
 {

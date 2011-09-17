@@ -13,6 +13,8 @@ namespace Pf4wp\Widgets;
  * Adds a user-definable title to the base Widget class
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Widgets
  */
 class TitledWidget extends Widget
 {

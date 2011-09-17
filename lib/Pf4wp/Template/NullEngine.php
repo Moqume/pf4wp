@@ -13,6 +13,8 @@ namespace Pf4wp\Template;
  * NullEngine provides a template engine that does nothing (hence `null`)
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Template
  */
 class NullEngine implements EngineInterface
 {

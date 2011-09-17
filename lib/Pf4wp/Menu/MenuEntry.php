@@ -14,6 +14,8 @@ namespace Pf4wp\Menu;
  * the WordPress Dashboard, and renders the initial portions of a page.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Menu
  */
 class MenuEntry
 {
@@ -111,6 +113,7 @@ class MenuEntry
      * 
      * @param string $name Name of the property to set
      * @param mixed $value Value to assign to the property
+     * @throws \Exception if the menu entry has already been added.
      */
     public function __set($name, $value)
     {
@@ -137,6 +140,7 @@ class MenuEntry
      * Displays the menu entry on the WordPress Dashboard
      *
      * @return bool Returns `true` if successful, `false` otherwise.
+     * @throws \Exception if the no title or callback function was specified
      */
     public function display()
     {

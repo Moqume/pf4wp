@@ -31,6 +31,8 @@ use Pf4wp\Template\TwigEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
+ * @version 0.0.1
+ * @package Pf4wp
  */
 class WordpressPlugin
 {
@@ -91,6 +93,17 @@ class WordpressPlugin
             if ( @file_exists($mofile) && @is_readable($mofile) )
                 load_textdomain($this->name, $mofile);
         }
+               
+        // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
+        $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
+       
+        if (($previous_version = $this->internal_options->version) != $current_version) {
+            $this->internal_options->version = $current_version;
+            
+            $this->clearCache(); // May be called twice with onActication(), but is here to prevent any potential issues if not called
+            
+            $this->onUpgrade($previous_version, $current_version);
+        }
         
         // Template Engine (currently Twig)
         $views_dir = $this->getPluginDir() . static::VIEWS_DIR;
@@ -108,7 +121,7 @@ class WordpressPlugin
         } else {
             // Provide a safe fallback
             $this->template = new NullEngine();
-        }
+        }        
     }
     
     /**
@@ -149,18 +162,7 @@ class WordpressPlugin
     {
         if ($this->registered)
             return;
-            
-        // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
-        $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
-       
-        if (($previous_version = $this->internal_options->version) != $current_version) {
-            $this->internal_options->version = $current_version;
-            
-            $this->clearCache(); // May be called twice with onActication(), but is here to prevent any potential issues if not called
-            
-            $this->onUpgrade($previous_version, $current_version);
-        }           
-     
+    
         /* A note on the use of "$this" versus the often seen "&$this": In PHP5 a copy of the object is 
          * only returned when using "clone". Also, for other use of references, the Zend Engine employs 
          * a "copy-on-write" logic, meaning that variables will be referenced instead of copied until 
@@ -284,6 +286,7 @@ class WordpressPlugin
      *		to be displayed if $is_error parameter is set to `true`
      * @param bool $is_error Optional parameter that if set to `true` will create an 
      *		AJAX error response (uses $data as the error string)
+     * @return die()
      */
     public function ajaxResponse($data, $is_error = false) {       
         $out = array();
@@ -340,7 +343,7 @@ class WordpressPlugin
     }
     
     /**
-     * Clears any managed caches
+     * Clears (purges) any managed caches
      */
     public function clearCache()
     {

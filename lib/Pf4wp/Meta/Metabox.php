@@ -15,6 +15,8 @@ use Pf4wp\WordpressPlugin;
  * The abstract Metabox class adds an easy to use meta box to post, page or link edit pages
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Meta
  */
 abstract class Metabox
 {

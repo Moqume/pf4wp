@@ -13,6 +13,8 @@ namespace Pf4wp\Storage;
  * not have permission to access, instead of throwing an UnexpectedValueException.
  *
  * @author antennen
+ * @package Pf4wp
+ * @subpackage Storage
  */
 class IgnorantRecursiveDirectoryIterator extends \RecursiveDirectoryIterator {
     function getChildren() {

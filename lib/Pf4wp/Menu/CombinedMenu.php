@@ -13,6 +13,8 @@ namespace Pf4wp\Menu;
  * CombinedMenu provides a stand-alone menu with submenus and page subheaders.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Menu
  */
 class CombinedMenu extends StandardMenu
 {

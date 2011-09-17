@@ -26,6 +26,8 @@ if (!isset($_myatu_version_check) || array_shift(explode('/', plugin_basename(st
  * ($_myatu_version_check_php) can be specified.
  *
  * THIS FILE MUST BE PHP4 COMPATIBLE.
+ *
+ * @package Pf4wp
  */
 
 global $wp_version;

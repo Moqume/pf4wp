@@ -15,6 +15,8 @@ use Pf4wp\WordpressPlugin;
  * DashboardWidget is a base class for adding Dashboard Widgets
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Dashboard
  */
 class DashboardWidget
 {

@@ -13,6 +13,8 @@ namespace Pf4wp\Options;
  * WordpressOptions provides a settings/options storage facility within WordPress itself.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Options
  */
 class WordpressOptions extends Options
 {

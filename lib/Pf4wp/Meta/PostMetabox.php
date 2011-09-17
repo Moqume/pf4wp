@@ -13,6 +13,8 @@ namespace Pf4wp\Meta;
  * The PostMetabox class adds an easy to use meta box to post or page edit pages
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Meta
  */
 class PostMetabox extends Metabox
 {

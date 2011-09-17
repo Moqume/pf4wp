@@ -1,2 +1,3 @@
 # Ignore auto-save/backup files
 *~
+/doc/html/

@@ -13,6 +13,8 @@ namespace Pf4wp\Template;
  * EngineInterface provides the interface for Template Engines
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Template
  */
 interface EngineInterface
 {

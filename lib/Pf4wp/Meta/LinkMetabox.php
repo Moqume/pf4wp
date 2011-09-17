@@ -13,6 +13,8 @@ namespace Pf4wp\Meta;
  * The LinkMetabox class adds an easy to use meta box to link edit/add pages
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Meta
  */
 class LinkMetabox extends Metabox
 {

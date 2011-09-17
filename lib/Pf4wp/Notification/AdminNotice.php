@@ -13,6 +13,8 @@ namespace Pf4wp\Notification;
  * Class providing notifications on the WordPress Dashboard
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Notification
  */
 class AdminNotice
 {

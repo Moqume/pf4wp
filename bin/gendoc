@@ -1,0 +1,20 @@
+#!/usr/bin/env php
+<?php
+
+/*
+ * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+$title = 'Plugin Framework for WordPress (Pf4wp)';
+$root_dir = dirname(__DIR__);
+$doc_dir = $root_dir . '/doc/html';
+$lib_dir = $root_dir . '/lib';
+$docblox = realpath($root_dir . '/../../../../../docblox/bin/docblox.php');
+
+if (!@file_exists($docblox))
+    exit('Need Docblox to generate documentation');
+    
+system(sprintf('php %s run -d %s -t %s --title %s', $docblox, escapeshellarg($lib_dir), escapeshellarg($doc_dir), escapeshellarg($title)));

@@ -13,6 +13,8 @@ namespace Pf4wp\Options;
  * Options provides an abstract class for standard option storage facilities.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Options
  */
 abstract class Options
 {
@@ -32,14 +34,14 @@ abstract class Options
         $this->name = $name;
        
         $this->setDefaults($defaults);
-        
-        // Invalidate cache
-        $this->cache = array();
     }
     
     public function setDefaults(array $defaults)
     {
         $this->defaults = $defaults;
+        
+        // Invalidate cache
+        $this->cache = array();        
     }
     
     /**
@@ -140,7 +142,6 @@ abstract class Options
         return $result;
     }
     
-
     /**
      * Deletes all options
      *

@@ -13,6 +13,8 @@ namespace Pf4wp\Menu;
  * SubHeadMenu provides a single menu entry, with submenus as page subheaders.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Menu
  */
 class SubHeadMenu extends CombinedMenu
 {

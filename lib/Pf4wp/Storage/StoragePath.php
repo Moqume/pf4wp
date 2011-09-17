@@ -17,6 +17,8 @@ use Pf4wp\WordpressPlugin;
  * written to.
  *
  * @author Mike Green <myatus@gmail.com>
+ * @package Pf4wp
+ * @subpackage Storage
  */
 class StoragePath
 {
