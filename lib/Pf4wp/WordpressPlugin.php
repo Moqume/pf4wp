@@ -71,11 +71,10 @@ class WordpressPlugin
      *
      * @see instance()
      * @see register()
+     * @param string $plugin_file The filename of the plugin's main file
      */
-    protected function __construct()
+    protected function __construct($plugin_file)
     {
-        $plugin_file = self::getPluginFile();
-        
         if (empty($plugin_file))
             return;
         
@@ -111,17 +110,23 @@ class WordpressPlugin
     /**
      * Return an instance of the plugin, optionally creating one if non-existing
      *
-     * @param bool $no_auto_register If set to true, do not automatically register hooks and filters that provide full functionality/events
+     * @param string $plugin_file The filename of the plugin's main file (Required on first call, optional afterwards)
+     * @param bool $auto_register If set to `true`, automatically register hooks and filters that provide full functionality/events
      * @return WordpressPlugin instance
+     * @throws \Exception if plugin file is omitted on first instance() call.
      */
-    final public static function instance($no_auto_register = false)
+    final public static function instance($plugin_file = '', $auto_register = true)
     {
         $class = get_called_class();
 
-        if (!array_key_exists($class, self::$instances))
-            self::$instances[$class] = new $class;
+        if (!array_key_exists($class, self::$instances)) {
+            if (empty($plugin_file))
+                throw new \Exception('First call to instance() requires the plugin filename');
+                
+            self::$instances[$class] = new $class($plugin_file);
+        }
         
-        if (empty($no_auto_register))
+        if ($auto_register === true)
             self::$instances[$class]->register_actions();
 
         return self::$instances[$class];
@@ -129,11 +134,42 @@ class WordpressPlugin
     
     /**
      * Registers the plugin with WordPress
+     *
+     * This function is called in the main plugin file, which WordPress loads. 
+     *
+     * Example of a main plugin file:
+     * <code>
+     * if (!function_exists('add_action')) return;
+     *
+     * $_pf4wp_file = __FILE__;
+     * require dirname(__FILE__).'/vendor/pf4wp/lib/Pf4wp/bootstrap.php';
+     * if (!isset($_pf4wp_check_pass) || !isset($_pf4wp_ucl) || !$_pf4wp_check_pass) return;
+     * 
+     * $_pf4wp_ucl->registerNamespaces(array(
+     *     'Symfony\\Component\\ClassLoader'   => __DIR__.'/vendor/pf4wp/lib/vendor',
+     *     'Pf4wp'                             => __DIR__.'/vendor/pf4wp/lib',
+     * ));
+     * $_pf4wp_ucl->registerPrefixes(array(
+     *     'Twig_' => __DIR__.'/vendor/Twig/lib',
+     * ));
+     * $_pf4wp_ucl->registerNamespaceFallbacks(array(
+     *     __DIR__.'/app',
+     * ));
+     * $_pf4wp_ucl->register();
+     * 
+     * My\Plugin::register(__FILE__); // <-- Register plugin with WordPress here
+     * </code>
+     *
+     * @param string $plugin_file The filename of the plugin's main file
+     * @throws \Exception if no plugin filename was specified
      */
-    final public static function register()
+    public static function register($plugin_file)
     {
-        self::instance(true);
-        
+        if (empty($plugin_file))
+            throw new \Exception('No plugin filename was specified for register()');
+            
+        self::instance($plugin_file, false); // Don't register the actions here, it will be done by WordPress with the 'init' action.
+
         add_action('init', get_called_class() . '::instance', 10, 0);
     }
     
@@ -144,7 +180,7 @@ class WordpressPlugin
      */
     public function register_actions()
     {
-        if ($this->registered)
+        if ($this->registered || empty($this->plugin_file))
             return;
             
         // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
@@ -153,7 +189,7 @@ class WordpressPlugin
         if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
             $this->internal_options->version = $current_version;
             
-            $this->clearCache(); // May be called twice with onActication(), but is here to prevent any potential issues if not called
+            $this->clearCache(); // May be called twice due to onActication(), but is here to prevent any potential issues if not called
             
             $this->onUpgrade($previous_version, $current_version);
         }
@@ -204,37 +240,6 @@ class WordpressPlugin
         
         // Done!
         $this->registered = true;
-    }
-
-    /**
-     * Internal: Obtains the core filename of the plugin during initialization
-     *
-     * This works on the premise that WordPress uses an "include" to load the plugin core (us!),
-     * so the last entry found would be this plugin. 
-     *
-     * It is OK to call other includes before the plugin is constructed, provided the plugin 
-     * follows the standard naming convention of `(plugin-base/)plugin-name/plugin-name.php`.
-     *
-     * @return string Plugin filename or `null` if invalid
-     */
-    private static function getPluginFile()
-    {
-        $included_files = get_included_files();
-        
-        while (!empty($included_files)) {
-            $last_included_file = str_replace('\\', '/', array_pop($included_files));
-            
-            $base = array_shift(explode('/', plugin_basename($last_included_file), 2));
-            
-            if (!empty($base)) {
-                $plugin_file = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . $base . DIRECTORY_SEPARATOR . $base . '.php';
-            
-                if (@file_exists($plugin_file))
-                    return $plugin_file;
-            }
-        }
-            
-        return null;
     }
     
     /**
@@ -419,7 +424,7 @@ class WordpressPlugin
      */
     final public static function _onUninstall()
     {
-        $this_instance = static::instance(true);
+        $this_instance = static::instance('', false);
 
         // Clear the managed cache
         $this_instance->clearCache();
