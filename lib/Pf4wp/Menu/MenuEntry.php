@@ -281,6 +281,11 @@ class MenuEntry
     {
         $callback = $this->menu_properties['callback'];
         
+        // Double check user permissions vs. required permissions
+        var_dump($this->menu_properties['capability']);
+        if (!current_user_can($this->menu_properties['capability']))
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        
         // Pass these details back to the callback, in case the developer wants to use them:
         $callback_args = array_intersect_key(
             $this->menu_properties, 

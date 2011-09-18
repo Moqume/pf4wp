@@ -7,7 +7,7 @@
  */
  
 /* PLEASE DO NOT DELETE THE FOLLOWING LINE AND LEAVE IT AT THE TOP: */
-if (!isset($_pf4wp_file) || array_shift(explode('/', plugin_basename(str_replace('\\', '/', dirname(__FILE__))), 2)) != plugin_basename(str_replace('\\', '/', dirname($_pf4wp_file)))) die('Restricted Access');
+if (!isset($_pf4wp_file) || array_shift(explode('/', str_replace('\\', '/', plugin_basename(dirname(__FILE__))))) != plugin_basename(dirname($_pf4wp_file))) die('Restricted Access');
 
 /**
  * This include file does a version check and creates an UCL instance.
@@ -97,8 +97,11 @@ if (extension_loaded('apc')) {
     if (!class_exists('Symfony\Component\ClassLoader\ApcUniversalClassLoader'))
         require_once __DIR__.'/../vendor/Symfony/Component/ClassLoader/ApcUniversalClassLoader.php';
 
-    $_pf4wp_ucl = new Symfony\Component\ClassLoader\ApcUniversalClassLoader('myatu.ucl.');
+    $_pf4wp_ucl = new Symfony\Component\ClassLoader\ApcUniversalClassLoader('pf4wp.'.plugin_basename(dirname($_pf4wp_file)).'.ucl.');
 } else {
+    if (!defined('PF4WP_APC'))
+        define('PF4WP_APC', false);
+        
     $_pf4wp_ucl = new Symfony\Component\ClassLoader\UniversalClassLoader();
 }
 

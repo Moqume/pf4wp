@@ -40,6 +40,8 @@ class WordpressPlugin
     const VIEWS_DIR        = 'resources/views/';
     const VIEWS_CACHE_DIR  = 'store/cache/';
     
+    const BEFORE_MENU_CALLBACK_SUFFIX = 'Before';
+    
     private static $instances = array();            // Instance container
     private $registered = false;                    // Whether the plugin has been registered with WordPress
     private $plugin_file = '';                      // Main (master) filename of the plugin, as loaded by WordPress
@@ -521,6 +523,9 @@ class WordpressPlugin
      * has a matching 'Before' method, it will be called too, containing the current screen
      * as an argument.
      *
+     * For example, if the menu callback is `onRenderMenu()`, and a method called 
+     * `onRenderMenuBefore()` exists, then it will be called prior to `onRenderMenu()`.
+     *
      * @see onAdminLoad()
      */
     final public function _onAdminLoad()
@@ -534,6 +539,9 @@ class WordpressPlugin
         $current_screen = get_current_screen();
         
         if ($this->menu instanceof StandardMenu && ($active_menu = $this->menu->getActiveMenu()) !== false) {
+            //if (!current_user_can($active_menu->capability))
+            //    wp_die(__('You do not have sufficient permissions to access this page.'));
+            
             $context_help = $active_menu->context_help;
 
             // Set contextual help - this is not handled by the menu directly
@@ -544,12 +552,12 @@ class WordpressPlugin
             $before_callback = false;
                 
             if (is_array($active_menu->callback) && is_object($active_menu->callback[0])) {
-                $before_callback_method = $active_menu->callback[1] . 'Before';
+                $before_callback_method = $active_menu->callback[1] . static::BEFORE_MENU_CALLBACK_SUFFIX;
                 
                 if (method_exists($active_menu->callback[0], $before_callback_method))
                     $before_callback = array($active_menu->callback[0], $before_callback_method);
             } else if (is_string($active_menu->callback)) {
-                $before_callback_function = $active_menu->callback . 'Before';
+                $before_callback_function = $active_menu->callback . static::BEFORE_MENU_CALLBACK_SUFFIX;
                 
                 if (function_exists($before_callback_function))
                     $before_callback = $before_callback_function;
@@ -768,6 +776,7 @@ class WordpressPlugin
      * Event called when the admin/Dashboard starts to load
      *
      * @param object|null The current screen being displayed
+     * @see _onAdminLoad()
      */
     public function onAdminLoad($current_screen) {}
     
