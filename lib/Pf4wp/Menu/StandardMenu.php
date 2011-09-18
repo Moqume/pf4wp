@@ -318,18 +318,15 @@ class StandardMenu
             if (!empty($context_help))
                 add_contextual_help($current_screen, $context_help);       
                 
-            // Manage screen settings
+            // Manage 'per page' screen settings
             $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
             
             if ($_SERVER['REQUEST_METHOD'] == 'POST' &&
                 isset($_POST['screen-options-apply']) &&
                 isset($_POST['wp_screen_options']['value']) &&
-                isset($_POST['wp_screen_options']['option']) &&
-                $_POST['wp_screen_options']['option'] == $per_page_id) {
-                
-                // Check nonce
-                check_admin_referer('screen-options-nonce', 'screenoptionnonce');
-                
+                isset($_POST['wp_screen_options']['option']) && $_POST['wp_screen_options']['option'] == $per_page_id &&
+                wp_verify_nonce($_POST['screenoptionnonce'], 'screen-options-nonce')) {
+
                 global $current_user;
                 
                 $value = (int)$_POST['wp_screen_options']['value'];

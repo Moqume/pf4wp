@@ -55,21 +55,4 @@ class Helpers
         
         return false; // Invalid or unknown callback
     }
-    
-    /**
-     * Adds an 'items per page' screen setting
-     * 
-     * @param string $title Title to display
-     * @param int $default Default amount of items per page
-     */
-    public static function addItemsPerPageScreenSetting($title = '', $default = 20)
-    {
-        add_screen_option('per_page', 
-            array(
-                'label'  => (empty($title)) ? __('items per page') : $title,
-                'option' => '',
-            )
-        );
-        
-    }
 }
