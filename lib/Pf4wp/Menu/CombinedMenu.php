@@ -57,7 +57,7 @@ class CombinedMenu extends StandardMenu
             $active_submenu = (array_key_exists(self::SUBMENU_ID, $_GET)) ? trim((string)$_GET[self::SUBMENU_ID]) : '';
             
             foreach ($this->menus as $menu) {
-                if ((empty($active_submenu) && $menu->isActive()) || $active_submenu == $menu->slug)
+                if ((empty($active_submenu) && $menu->isActive()) || $active_submenu == $menu->_properties['slug'])
                     $this->active_menu = $menu;
             }
         }
@@ -79,8 +79,8 @@ class CombinedMenu extends StandardMenu
             $this->active_parent_slug = false;
             
             foreach ($this->menus as $menu) {
-                if (!$menu->use_subheaders && $menu->isActive())
-                    $this->active_parent_slug = $menu->slug;
+                if (!$menu->_properties['use_subheaders'] && $menu->isActive())
+                    $this->active_parent_slug = $menu->_properties['slug'];
             }
         }
         
@@ -98,21 +98,16 @@ class CombinedMenu extends StandardMenu
      * @param string $title The title to give the menu entry
      * @param string|array $callback The function to call when the menu's page nees to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optional, none by default)
-     * @param bool|int $count A count that is displayed next to the menu entry, or false for none (Optional, none by default)
-     * @param string $context_help String continaing context help (Optional, none by default)
-     * @param string $page_title The page title to display on a rendered page (Optional, menu entry title by default)
-     * @param string $icon A small icon displayed next to the menu entry, if supported (Optional, none by default)
-     * @param string $large_icon The CSS ID or URL of a large icon to display on the rendered page (Optional, CSS ID 'icon-general-option' by default)
      * @param bool $is_submenu Set to true if this is a submenu entry (`False` by default)
      * @return MenuEntry Reference to the menu entry
+     * @throws \Exception if the specified menu is a submenu, without having added a main menu.
      */
-    public function addMenu($title, $callback, $callback_args = false, $count = false, $context_help = '', $page_title = '', $icon = '', $large_icon = '', $is_submenu = false)
+    public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {
-        $menu = parent::addMenu($title, $callback, $callback_args, $count, $context_help, $page_title, $icon, $large_icon, $is_submenu);
+        $menu = parent::addMenu($title, $callback, $callback_args, $is_submenu);
 
-
-        $menu->use_subheaders = false;
-        $menu->before_callback = array($this, 'onRenderSubHeader');
+        $menu->_properties['use_subheaders'] = false;
+        $menu->_properties['before_callback'] = array($this, 'onRenderSubHeader');
         
         return $menu;
     }
@@ -127,16 +122,14 @@ class CombinedMenu extends StandardMenu
      * @param string $title The title of the subheader entry
      * @param string|array $callback Callback function to call when the selected page needs to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optional, none by default)
-     * @param bool|int $count A count that is displayed next to the menu entry, or false for none (Optional, none by default)
-     * @param string $context_help String continaing context help (Optional, none by default)
      * @return MenuEntry Reference to the menu entry, `false` if invalid.
      */
-    public function addSubHeader(MenuEntry $parent_menu, $title, $callback, $callback_args = false, $count = false, $context_help = '')
+    public function addSubHeader(MenuEntry $parent_menu, $title, $callback, $callback_args = false)
     {
-        $menu = $this->addSubMenu($title, $callback, $callback_args, $count, $context_help);
+        $menu = $this->addSubMenu($title, $callback, $callback_args);
         
-        $menu->use_subheaders   = true;
-        $menu->parent_slug      = $parent_menu->slug; // So we know under which (sub)menu to show the headers
+        $menu->_properties['use_subheaders'] = true;
+        $menu->_properties['parent_slug']    = $parent_menu->_properties['slug']; // So we know under which (sub)menu to show the headers
         
         return $menu;
     }
@@ -152,10 +145,10 @@ class CombinedMenu extends StandardMenu
     {
         $active_parent_slug = $this->getActiveParentSlug();
     
-        $res = (($menu->use_subheaders && $menu->parent_slug == $active_parent_slug) || $menu->slug == $active_parent_slug);
+        $res = (($menu->_properties['use_subheaders'] && $menu->_properties['parent_slug'] == $active_parent_slug) || $menu->_properties['slug'] == $active_parent_slug);
         
         if ($res)
-            $title = ($menu->slug != $active_parent_slug) ? $menu->title : $this->home_title;
+            $title = ($menu->_properties['slug'] != $active_parent_slug) ? $menu->title : $this->home_title;
             
         return $res;
     }
@@ -175,32 +168,31 @@ class CombinedMenu extends StandardMenu
     {
         $result = null;
         
-        $submenus = array();
+        $subheaders = array();
         $active_menu = $this->getActiveMenu();
         $active_parent_slug = $this->getActiveParentSlug();
         
         foreach ($this->menus as $menu) {
             if ($this->doRenderSubHeader($menu, $title)) {
-                // Note: $title will be set at this stage
+                $is_active = ($active_menu == $menu);
                 
-                $is_active = ($active_menu == $menu);                
-				$class = ( $is_active ) ? ' class="current"' : '';
+                $title = ($menu->count !== false) ? sprintf('%s <span class="count">(%d)</span>', $title, $menu->count) : $title;
                 
-                // Add count, if present
-                if ( $menu->count !== false )
-                    $title .= ' <span class="count">(' . $menu->count . ')</span>';
-                    
-				$submenus[] = '<li><a href="' .  htmlspecialchars(add_query_arg(array(self::SUBMENU_ID=>$menu->slug))) . '"' . $class . '>' . $title . '</a>';
+				$subheaders[] = sprintf(
+                    '<li><a href="%s" %s>%s</a>', 
+                    htmlspecialchars(add_query_arg(array(self::SUBMENU_ID=>$menu->_properties['slug']))),
+                    ($is_active) ? 'class="current"' : '',
+                    $title
+                );
                 
-                // Override the callback of the active subHEADER.
-                if ( $is_active )
-                    $result = $menu->callback;
+                // Override the menu callbacks
+                if ($is_active)
+                    $result = $menu;
             }
         }
                
-        if ( count($submenus) > 1 ) {
-            echo '<div><ul class="subsubsub">' . implode(" | </li>", $submenus) . '</li></ul></div>';
-        }
+        if (count($subheaders) > 1)
+            printf('<div><ul class="subsubsub">%s</li></ul></div>', implode(" | </li>", $subheaders));
         
         return $result;
     }

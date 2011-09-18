@@ -9,6 +9,7 @@
 
 namespace Pf4wp;
 
+use Pf4wp\Common\Helpers;
 use Pf4wp\Info\PluginInfo;
 use Pf4wp\Storage\StoragePath;
 use Pf4wp\Notification\AdminNotice;
@@ -39,8 +40,6 @@ class WordpressPlugin
     const LOCALIZATION_DIR = 'resources/l10n/';
     const VIEWS_DIR        = 'resources/views/';
     const VIEWS_CACHE_DIR  = 'store/cache/';
-    
-    const BEFORE_MENU_CALLBACK_SUFFIX = 'Before';
     
     private static $instances = array();            // Instance container
     private $registered = false;                    // Whether the plugin has been registered with WordPress
@@ -464,10 +463,8 @@ class WordpressPlugin
             // Add additional hooks for menu entries
             $menus = $this->menu->getMenus();
             if ( is_array($menus) ) {
-                foreach ($menus as $menu_entry) {
-                    if ($menu_entry instanceof MenuEntry)
-                        $this->attachAdminLoadHooks($menu_entry->getHook());
-                }
+                foreach ($menus as $menu_entry)
+                    $this->attachAdminLoadHooks($menu_entry->getHook());
             }
         } else if (is_string($result)) {
             $this->attachAdminLoadHooks($result);
@@ -519,13 +516,6 @@ class WordpressPlugin
     /**
      * Admin loader event called when the selected page is about to be rendered - Stage 2
      *
-     * This will render the contextual help, based on the selected menu. If the menu callback
-     * has a matching 'Before' method, it will be called too, containing the current screen
-     * as an argument.
-     *
-     * For example, if the menu callback is `onRenderMenu()`, and a method called 
-     * `onRenderMenuBefore()` exists, then it will be called prior to `onRenderMenu()`.
-     *
      * @see onAdminLoad()
      */
     final public function _onAdminLoad()
@@ -536,35 +526,7 @@ class WordpressPlugin
         // Set new exception handler
         set_exception_handler(array($this, '_onStage2Exception'));
 
-        $current_screen = get_current_screen();
-        
-        if ($this->menu instanceof StandardMenu && ($active_menu = $this->menu->getActiveMenu()) !== false) {
-            $context_help = $active_menu->context_help;
-
-            // Set contextual help - this is not handled by the menu directly
-            if (!empty($context_help))
-                add_contextual_help($current_screen, $context_help);            
-            
-            // Test if there's a method to call before the callback (this differs from MenuEntry->before_callback!)
-            $before_callback = false;
-                
-            if (is_array($active_menu->callback) && is_object($active_menu->callback[0])) {
-                $before_callback_method = $active_menu->callback[1] . static::BEFORE_MENU_CALLBACK_SUFFIX;
-                
-                if (method_exists($active_menu->callback[0], $before_callback_method))
-                    $before_callback = array($active_menu->callback[0], $before_callback_method);
-            } else if (is_string($active_menu->callback)) {
-                $before_callback_function = $active_menu->callback . static::BEFORE_MENU_CALLBACK_SUFFIX;
-                
-                if (function_exists($before_callback_function))
-                    $before_callback = $before_callback_function;
-            }
-            
-            if ($before_callback)
-                call_user_func($before_callback, $current_screen);
-        }
-
-        $this->onAdminLoad($current_screen);
+        $this->onAdminLoad(get_current_screen());
     }
         
     /**

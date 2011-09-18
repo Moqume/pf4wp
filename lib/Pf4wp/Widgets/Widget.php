@@ -59,7 +59,7 @@ class Widget extends \WP_Widget
      */
     public function doInit(WordpressPlugin $owner)
     {
-        $this->owner = &$owner;
+        $this->owner = $owner;
     }
     
     

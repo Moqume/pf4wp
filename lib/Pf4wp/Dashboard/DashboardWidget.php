@@ -40,7 +40,7 @@ class DashboardWidget
         if (!is_admin())
             return;
 
-        $this->owner = &$owner;
+        $this->owner = $owner;
         $this->name = strtolower(preg_replace('/\W/', '-', get_class($this)));
 
         if ($auto_register === true)

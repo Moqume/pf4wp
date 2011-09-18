@@ -56,15 +56,12 @@ abstract class Metabox
      * @param WordpressPlugin $owner Owner of this Metabox
      * @param bool $auto_register Set to `true` if the meta-box can be registered immidiately during construction
      */
-    public function __construct($owner, $auto_register = true)
+    public function __construct(WordpressPlugin $owner, $auto_register = true)
     {
         if (!is_admin())
             return;
         
-        if (!$owner instanceof WordpressPlugin)
-            throw new \Exception('Metabox must have a valid owner instance of WordpressPlugin.');
-        
-        $this->owner = &$owner;
+        $this->owner = $owner;
         $this->name = strtolower(preg_replace('/\W/', '-', get_class($this)));
 
         if ($auto_register === true)

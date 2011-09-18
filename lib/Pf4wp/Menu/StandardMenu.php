@@ -9,6 +9,8 @@
 
 namespace Pf4wp\Menu;
 
+use Pf4wp\Common\Helpers;
+
 /**
  * StandardMenu provides a single stand-alone menu entry with submenus.
  *
@@ -18,12 +20,14 @@ namespace Pf4wp\Menu;
  */
 class StandardMenu
 {
+    const PRE_MENU_CALLBACK_SUFFIX = 'Load';
+    
     private $active_menu;
     private $displayed = false;
-    private $id = 'myatu';
+    private $id = 'pf4wp';
     
     protected $menus = array(); // Read only public
-    protected $parent = ''; // Parent menu
+    protected $parent = '';     // Parent menu
     protected $capability = ''; // Default, determined by the type of menu. @see MenuEntry
     
     /**
@@ -44,7 +48,6 @@ class StandardMenu
         if (!empty($id))
             $this->id = $id;
     }
-    
         
     /**
      * Checks if the menu has already been displayed
@@ -148,8 +151,8 @@ class StandardMenu
             $this->type = $new_type;
             
             foreach ($this->menus as $menu) {
-                if ($menu->type != MenuEntry::MT_SUBMENU)
-                    $menu->type = $this->type;
+                if ($menu->_properties['type'] != MenuEntry::MT_SUBMENU)
+                    $menu->_properties['type'] = $this->type;
             }               
         } else {
             throw new \Exception('The menu has already been displayed. Cannot change type');
@@ -157,7 +160,7 @@ class StandardMenu
     }
     
     /**
-     * Obtains the meny type being used
+     * Obtains the menu type being used
      *
      * @see \Myatu\WordPress\Plugin\Menu\MenuEntry
      * @see setType()
@@ -214,51 +217,44 @@ class StandardMenu
      * @param string $title The title to give the menu entry
      * @param string|array $callback The function to call when the menu's page nees to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optional, none by default)
-     * @param bool|int $count A count that is displayed next to the menu entry, or false for none (Optional, none by default)
-     * @param string $context_help String continaing context help (Optional, none by default)
-     * @param string $page_title The page title to display on a rendered page (Optional, menu entry title by default)
-     * @param string $icon A small icon displayed next to the menu entry, if supported (Optional, none by default)
-     * @param string $large_icon The CSS ID or URL of a large icon to display on the rendered page (Optional, CSS ID 'icon-general-option' by default)
      * @param bool $is_submenu Set to `true` if this is a submenu entry (`False` by default)
+     * @return MenuEntry Reference to the menu entry
      * @throws \Exception if the specified menu is a submenu, without having added a main menu.
      */
-    public function addMenu($title, $callback, $callback_args = false, $count = false, $context_help = '', $page_title = '', $icon = '', $large_icon = '', $is_submenu = false)
+    public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {
         $menu = new MenuEntry();
         
-        $menu->title         = $title;
-        $menu->page_title    = $page_title;
-        $menu->count         = $count;
-        $menu->callback      = $callback;
-        $menu->callback_args = $callback_args;
-        $menu->context_help  = $context_help;
-        $menu->icon          = $icon;
-        $menu->large_icon    = $large_icon;
-        $menu->capability    = $this->capability;
-        $menu->slug          = MenuEntry::makeSlug($this->id.$menu->title);
+        $menu->title      = $title;
+        $menu->capability = $this->capability;
+        
+        $menu->_properties['callback']      = $callback;
+        $menu->_properties['callback_args'] = $callback_args;
+        $menu->_properties['slug']          = Helpers::makeSlug($this->id.$menu->title);
         
         // Ensure the slug is unique in our menu (up to 99).
-        if (array_key_exists($menu->slug, $this->menus)) {
+        if (array_key_exists($menu->_properties['slug'], $this->menus)) {
             $count = 1;
-            while (array_key_exists($menu->slug.$count, $this->menus) && $count < 100)
+            
+            while (array_key_exists($menu->_properties['slug'].$count, $this->menus) && $count < 100)
                 $count++;
            
-            $menu->slug .= $count;
+            $menu->_properties['slug'] .= $count;
         }
         
         if ( !$is_submenu ) {
-            $this->parent = $menu->slug;
-            $menu->type = $this->type;
+            $this->parent              = $menu->_properties['slug'];
+            $menu->_properties['type'] = $this->type;
         } else {
             if (!empty($this->parent)) {
-                $menu->parent_slug = $this->parent;
-                $menu->type = MenuEntry::MT_SUBMENU; // Submenus are always of this type
+                $menu->_properties['parent_slug'] = $this->parent;
+                $menu->_properties['type']        = MenuEntry::MT_SUBMENU; // Submenus are always of this type
             } else {
                 throw new \Exception('Cannot add a submenu before adding a main menu entry.');
             }
         }
         
-        $this->menus[$menu->slug] = $menu;
+        $this->menus[$menu->_properties['slug']] = $menu;
         
         return $menu;
     }
@@ -271,13 +267,11 @@ class StandardMenu
      * @param string $title The title of the submenu entry
      * @param string|array $callback Callback function to call when the selected menu page needs to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optiona, none by default)
-     * @param bool|int $count A count that is displayed next to the menu entry, or false for none (Optional, none by default)
-     * @param string $context_help String continaing context help (Optional, none by default)
      * @return MenuEntry Reference to the menu entry
      */
-    public function addSubMenu($title, $callback, $callback_args = false, $count = false, $context_help = '')
+    public function addSubMenu($title, $callback, $callback_args = false)
     {
-        return $this->addMenu($title, $callback, $callback_args, $count, $context_help, '', '', '', true);
+        return $this->addMenu($title, $callback, $callback_args, true);
     }
     
     /**
@@ -286,8 +280,83 @@ class StandardMenu
     public function display()
     {
         foreach ($this->menus as $menu) {
-            if (!$menu->isDisplayed())
-                $menu->display();
+            if (!$menu->isDisplayed()) {
+                $result = $menu->display();
+                if ($result) {
+                    add_action('load-' . $menu->getHook(), array($this, 'onMenuLoad'));
+                }
+            }
+        }
+    }
+    
+    /**
+     * Menu loader event
+     *
+     * This will render the contextual help and 'per_page' settings, based 
+     * on the selected menu. If the menu callback has a matching 'Load' method, 
+     * it will be called too, containing the current screen as an argument.
+     *
+     * For example, if the menu callback is `onRenderMenu()`, and a method called 
+     * `onRenderMenuLoad()` exists, then it will be called prior to `onRenderMenu()`.
+     *
+     * This could be used, for instance, to add screen settings:
+     * <code>
+     *   add_action('screen_settings', ($this, 'screen_settings_callback'));
+     * </code>
+     *
+     * where the `screen_settings_callback()` will return the details to be displayed.
+     *
+     */
+    public function onMenuLoad()
+    {
+        if (($active_menu = $this->getActiveMenu()) !== false) {
+            $current_screen = get_current_screen();
+            
+            $context_help = $active_menu->context_help;
+
+            // Set contextual help
+            if (!empty($context_help))
+                add_contextual_help($current_screen, $context_help);       
+                
+            // Manage screen settings
+            $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
+            
+            if ($_SERVER['REQUEST_METHOD'] == 'POST' &&
+                isset($_POST['screen-options-apply']) &&
+                isset($_POST['wp_screen_options']['value']) &&
+                isset($_POST['wp_screen_options']['option']) &&
+                $_POST['wp_screen_options']['option'] == $per_page_id) {
+                
+                // Check nonce
+                check_admin_referer('screen-options-nonce', 'screenoptionnonce');
+                
+                global $current_user;
+                
+                $value = (int)$_POST['wp_screen_options']['value'];
+                
+                // Let's be reasonable
+                if ($value < 1 || $value > 100)
+                    $value = (int)$active_menu->per_page;
+                
+                update_user_option($current_user->ID, $per_page_id, $value);
+            }
+            
+            if ($active_menu->per_page) {
+                // add_screen_option handles get_user_option, no need to pass value
+                add_screen_option('per_page',
+                    array(
+                        'label'   => (empty($active_menu->per_page_label)) ? __('items per page') : $active_menu->per_page_label,
+                        'option'  => $per_page_id,
+                        'default' => (int)$active_menu->per_page,
+                    )
+                );
+            }
+            
+            // Test if there's a method to call before the actual callback
+            $before_callback = Helpers::validCallback($active_menu->_properties['callback'], static::PRE_MENU_CALLBACK_SUFFIX);
+            
+            if ($before_callback)
+                call_user_func($before_callback, $current_screen);
         }
     }
 }

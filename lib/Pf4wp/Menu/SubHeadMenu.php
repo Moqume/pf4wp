@@ -37,20 +37,15 @@ class SubHeadMenu extends CombinedMenu
      * @param string $title The title to give the menu entry
      * @param string|array $callback The function to call when the menu's page nees to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optional, none by default)
-     * @param bool|int $count A count that is displayed next to the menu entry, or false for none (Optional, none by default)
-     * @param string $context_help String continaing context help (Optional, none by default)
-     * @param string $page_title The page title to display on a rendered page (Optional, menu entry title by default)
-     * @param string $icon A small icon displayed next to the menu entry, if supported (Optional, none by default)
-     * @param string $large_icon The CSS ID or URL of a large icon to display on the 
-     *   rendered page (Optional, CSS ID 'icon-general-option' by default)
      * @param bool $is_submenu Set to true if this is a submenu entry (False by default)
      * @return MenuEntry Reference to the menu entry
+     * @throws \Exception if the specified menu is a submenu, without having added a main menu.
      */    
-    public function addMenu($title, $callback, $callback_args = false, $count = false, $context_help = '', $page_title = '', $icon = '', $large_icon = '', $is_submenu = false)
+    public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {
-        $menu = parent::addMenu($title, $callback, $callback_args, $count, $context_help, $page_title, $icon, $large_icon, $is_submenu);
+        $menu = parent::addMenu($title, $callback, $callback_args, $is_submenu);
 
-        $menu->use_subheaders = true;
+        $menu->_properties['use_subheaders'] = true;
         
         return $menu;
     }
@@ -65,7 +60,8 @@ class SubHeadMenu extends CombinedMenu
     public function doRenderSubHeader(MenuEntry $menu, &$title)
     {
         $active_parent_slug = $this->getActiveParentSlug();
-        $title = ($menu->type == MenuEntry::MT_SUBMENU) ? $menu->title : $this->home_title;
+        
+        $title = ($menu->_properties['type'] == MenuEntry::MT_SUBMENU) ? $menu->title : $this->home_title;
             
         return true;
     }    

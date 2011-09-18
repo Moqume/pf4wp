@@ -9,6 +9,8 @@
 
 namespace Pf4wp\Menu;
 
+use Pf4wp\Common\Helpers;
+
 /**
  * MenuEntry provides all the details for adding and keeping track of a menu entry on 
  * the WordPress Dashboard, and renders the initial portions of a page.
@@ -32,32 +34,51 @@ class MenuEntry
     const MT_PLUGINS    = 8;
     const MT_POSTS      = 9;
     const MT_THEMES     = 10;
-    const MT_USERS      = 11;    
+    const MT_USERS      = 11;
+    
+    const PER_PAGE_SUFFIX = '_per_page';
     
     private $hook = false;
     private $displayed = false;
-    private $menu_properties = array(
-        'parent_slug'     => '',
-        'capability'      => '',
+    
+    /** Internal properties, best not modified directly */
+    public $_properties = array(
         'slug'            => '',
-        'page_title'      => '',
-        'title'           => '',
-        'count'           => false,
-        'large_icon'      => '',
-        'icon'            => '',
+        'parent_slug'     => '',
         'before_callback' => '',
         'after_callback'  => '',
         'callback'        => '',
         'callback_args'   => false,
-        'context_help'    => '',
         'type'            => self::MT_SETTINGS, // default
+        'use_subheaders'  => false,
     );
     
-    /**
-     * Set to true, MT_SUBMENU will be not be rendered automatically
-     */
-    public $use_subheaders = false;
+    /** The capability (permissions) the user needs in order to view this menu entry */
+    public $capability = '';
     
+    /** The title of the menu entry */
+    public $title = '';
+    
+    /** The icon for this menu entry (valid for top level menus only) */
+    public $icon = '';
+    
+    /** The count to be displayed next to the menu entry, or `false` if none */
+    public $count = false;
+    
+    /** The page title to be displayed on the page for this menu entry */
+    public $page_title = '';
+
+    /** The large icon to be displayed on the page for this menu entry */
+    public $large_icon = '';
+    
+    /** The context help to display on the page for this menu entry */
+    public $context_help = '';
+    
+    /** The default value of 'per page' items, of `false` if not used */
+    public $per_page = false;
+    
+    /** The label of the 'per page' items */
+    public $per_page_label = '';
     
     /**
      * Checks if the current menu item is active (selected)
@@ -95,48 +116,6 @@ class MenuEntry
     }
     
     /**
-     * Get magic for menu item properties
-     *
-     * @param string $name Name of the property to retrieve
-     * @return mixed
-     */
-    public function __get($name)
-    {
-        if (array_key_exists($name, $this->menu_properties))
-            return $this->menu_properties[$name];
-        
-        return null;
-    }
-    
-    /**
-     * Set magic for menu item properties
-     * 
-     * @param string $name Name of the property to set
-     * @param mixed $value Value to assign to the property
-     * @throws \Exception if the menu entry has already been added.
-     */
-    public function __set($name, $value)
-    {
-        if ( !$this->displayed ) {
-            if (array_key_exists($name, $this->menu_properties))
-                $this->menu_properties[$name] = $value;
-        } else {
-            throw new \Exception('Menu entry has already been added');
-        }
-    }
-        
-    /**
-     * Converts a string into a fairly unique, short slug for the menu
-     *
-     * @param string $string String to convert to a slug
-     * @return string Slug
-     */
-    public static function makeSlug($string)
-    {
-        return substr(base64_encode(md5($string)), 3, 6);
-    }
-    
-    /**
      * Displays the menu entry on the WordPress Dashboard
      *
      * @return bool Returns `true` if successful, `false` otherwise.
@@ -144,20 +123,20 @@ class MenuEntry
      */
     public function display()
     {
-        if ( empty($this->menu_properties['title']) || 
-             empty($this->menu_properties['callback'] )) {
+        if ( empty($this->title) || 
+             empty($this->_properties['callback'] )) {
             throw new \Exception('No title or callback function specified for menu entry');
         }
                
-        $title      = $this->menu_properties['title'];
-        $page_title = $this->menu_properties['page_title'];
-        $icon       = $this->menu_properties['icon'];
-        $capability = $this->menu_properties['capability'];
-        $parent     = $this->menu_properties['parent_slug'];
-        $slug       = $this->menu_properties['slug'];
+        $title      = $this->title;
+        $page_title = $this->page_title;
+        $icon       = $this->icon;
+        $capability = $this->capability;
+        $parent     = $this->_properties['parent_slug'];
+        $slug       = $this->_properties['slug'];
         
         if ( empty($slug) ) {
-            $slug = self::makeSlug($title);
+            $slug = Helpers::makeSlug($title);
         }
         
         if ( empty($page_title) ) {
@@ -165,14 +144,14 @@ class MenuEntry
         }
         
         // Add count to the title here (prior operations use a "clean" title)
-        if ($this->menu_properties['count'] !== false) {
-            $title .= ' <span class="awaiting-mod"><span class="pending-count">' . $this->menu_properties['count'] . '</span>';
+        if ($this->count !== false) {
+            $title .= ' <span class="awaiting-mod"><span class="pending-count">' . $this->count . '</span>';
         }
         
         // We call our own callback first
         $callback = array($this, 'onMenuCallback');
         
-        switch ($this->menu_properties['type'])
+        switch ($this->_properties['type'])
         {
             case self::MT_CUSTOM:
                 if ( empty($capability) ) $capability = 'read';
@@ -181,7 +160,7 @@ class MenuEntry
             
             case self::MT_SUBMENU:
                 if ( empty($capability) ) $capability = 'read';
-                if ( !$this->use_subheaders ) {
+                if ( !$this->_properties['use_subheaders'] ) {
                     $this->hook = add_submenu_page($parent, $page_title, $title, $capability, $slug, $callback);
                 } else {
                     $this->hook = '';
@@ -252,11 +231,11 @@ class MenuEntry
         
         if ( $this->displayed ) {
             // Write back any changes for future reference
-            $this->menu_properties['slug'] = $slug;
-            $this->menu_properties['capability'] = $capability;
-            $this->menu_properties['page_title'] = $page_title;
+            $this->_properties['slug'] = $slug;
+            $this->capability = $capability;
+            $this->page_title = $page_title;
         }
-
+        
         return $this->displayed;
     }
 
@@ -272,63 +251,66 @@ class MenuEntry
      *
      * The actual callback depends on what is returned by the menu's "before_callback". If
      * that is NULL, it will use the callback defined for this MenuEntry's "callback", 
-     * otherwise the result from "before_callback" is used.
+     * otherwise the callback of the result is used.
      *
      * The callback is also passed an array containing various details about the menu
      * properties, its hook and any custom defined arguments.
      */
     public function onMenuCallback()
     {
-        $callback = $this->menu_properties['callback'];
-        
         // Extra permission check  (if bypassed in WordPress)
-        if (!current_user_can($this->menu_properties['capability']))
+        if (!current_user_can($this->capability))
             wp_die(__('You do not have sufficient permissions to access this page.'));
+
+        $callback       = $this->_properties['callback'];
+        $callback_args  = $this->_properties['callback_args'];
+        $per_page_id    = $this->_properties['slug'] . static::PER_PAGE_SUFFIX;
         
-        // Pass these details back to the callback, in case the developer wants to use them:
-        $callback_args = array_intersect_key(
-            $this->menu_properties, 
-            array(
-                'parent_slug' => '', 'capability' => '', 'slug' => '',
-                'page_title' => '', 'title' => '', 'count' => false,
-                'callback_args' => false,
-            )
-        );
+        // Perform 'before_callback' event
+        ob_start();
+        if ( Helpers::validCallback($this->_properties['before_callback']) !== false ) {
+            $result = call_user_func($this->_properties['before_callback']);
+            
+            // If the result from 'before_callback' is not NULL, use the result as the actual callback and callback_args (override).
+            if ( !empty($result) && $result instanceof MenuEntry ) {
+                $callback       = $result->_properties['callback'];
+                $callback_args  = $result->_properties['callback_args'];
+                $per_page_id    = $result->_properties['slug'] . static::PER_PAGE_SUFFIX;
+            }
+        }
+        $before_callback_output = ob_get_clean();
+
+        /* Render page */
         
         echo '<div class="wrap">';
         
         // Render large icon
-        if (!empty($this->menu_properties['large_icon'])) {
-            if ( strpos($this->menu_properties['large_icon'], '/') === false ) {
+        if (!empty($this->large_icon)) {
+            if ( strpos($this->large_icon, '/') === false ) {
                 // Use an icon by CSS ID
-                $icon = sprintf('id="%s"', $this->menu_properties['large_icon']);
+                $icon = sprintf('id="%s"', $this->large_icon);
             } else {
                 // Property contains a URL
-                $icon = sprintf('style="background: url(\'%s\') no-repeat scroll center center transparent"', $this->menu_properties['large_icon']);
+                $icon = sprintf('style="background: url(\'%s\') no-repeat scroll center center transparent"', $this->large_icon);
             }
         }
         printf('<div class="icon32" %s><br /></div>', (isset($icon)) ? $icon : 'id="icon-options-general"');
 
         // Render title
-        printf('<h2>%s</h2>', $this->menu_properties['page_title']);
+        printf('<h2>%s</h2>', $this->page_title);
         
-        // Perform 'before_callback' event
-        if ( !empty($this->menu_properties['before_callback']) ) {
-            $result = call_user_func($this->menu_properties['before_callback']);
-            
-            // If the result from 'before_callback' is not NULL, use the result as the actual callback (override).
-            if ( !empty($result) )
-                $callback = $result;
-        }
-
-        // Perform final callback
+        // Render output of before_callback
+        echo $before_callback_output;
+        
+        // Perform user-defined callback
         echo '<div class="clear"></div><div>';
-        call_user_func($callback, $callback_args);       
+        if ( Helpers::validCallback($callback) )
+            call_user_func($callback, $callback_args, (int)get_user_option($per_page_id));
         echo '</div>';
         
         // Perform 'afer_callback' event
-        if ( !empty($this->menu_properties['after_callback']) )
-            call_user_func($this->menu_properties['after_callback']);        
+        if ( Helpers::validCallback($this->_properties['after_callback']) )
+            call_user_func($this->_properties['after_callback']);        
         
         echo '</div>'; // div wrap
     }    
