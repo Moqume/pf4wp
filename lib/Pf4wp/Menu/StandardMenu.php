@@ -57,7 +57,7 @@ class StandardMenu
     {
         if ($this->displayed == false) {
             foreach ($this->menus as $menu) {
-                if ( $menu instanceof MenuEntry && $menu->isDisplayed() )
+                if ($menu->isDisplayed())
                     return ($this->displayed = true);
             }
         }
@@ -148,7 +148,7 @@ class StandardMenu
             $this->type = $new_type;
             
             foreach ($this->menus as $menu) {
-                if ( $menu instanceof MenuEntry && $menu->type != MenuEntry::MT_SUBMENU )
+                if ($menu->type != MenuEntry::MT_SUBMENU)
                     $menu->type = $this->type;
             }               
         } else {
@@ -185,10 +185,8 @@ class StandardMenu
         if ( ! $this->isDisplayed() ) {
             $this->capability = $new_capability;
             
-            foreach ($this->menus as $menu) {
-                if ( $menu instanceof MenuEntry )
-                    $menu->capability = $this->capability;
-            }
+            foreach ($this->menus as $menu)
+                $menu->capability = $this->capability;
         } else {
             throw new \Exception('The menu has already been displayed. Cannot change capabilities');
         }
@@ -260,7 +258,7 @@ class StandardMenu
             }
         }
         
-        $this->menus[$menu->slug] = &$menu;
+        $this->menus[$menu->slug] = $menu;
         
         return $menu;
     }
@@ -284,17 +282,13 @@ class StandardMenu
     
     /**
      * Renders (displays) all the menu entries in the WordPress Dashboard
-     *
-     * @return bool Returns `true` if displaying the menu was successful, `false` otherwise
      */
     public function display()
     {
         foreach ($this->menus as $menu) {
-            if ($menu instanceof MenuEntry && !$menu->isDisplayed() && $menu->display() === false)
-                return false;
+            if (!$menu->isDisplayed())
+                $menu->display();
         }
-               
-        return true;
     }
 }
 

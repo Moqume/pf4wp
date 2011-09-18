@@ -62,16 +62,12 @@ class SubHeadMenu extends CombinedMenu
      * @param string $title Reference to title that should be displayed if this function returns true
      * @return bool Returns `true` if the menu should be displayed, `false` otherwise
      */
-    public function doRenderSubHeader($menu, &$title)
+    public function doRenderSubHeader(MenuEntry $menu, &$title)
     {
-        $res = ($menu instanceof MenuEntry);
-        
-        if ($res) {
-            $active_parent_slug = $this->getActiveParentSlug();
-            $title = ($menu->type == MenuEntry::MT_SUBMENU) ? $menu->title : $this->home_title;
-        }
+        $active_parent_slug = $this->getActiveParentSlug();
+        $title = ($menu->type == MenuEntry::MT_SUBMENU) ? $menu->title : $this->home_title;
             
-        return $res;
+        return true;
     }    
 }
 

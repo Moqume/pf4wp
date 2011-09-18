@@ -131,11 +131,8 @@ class CombinedMenu extends StandardMenu
      * @param string $context_help String continaing context help (Optional, none by default)
      * @return MenuEntry Reference to the menu entry, `false` if invalid.
      */
-    public function addSubHeader(&$parent_menu, $title, $callback, $callback_args = false, $count = false, $context_help = '')
+    public function addSubHeader(MenuEntry $parent_menu, $title, $callback, $callback_args = false, $count = false, $context_help = '')
     {
-        if (!$parent_menu instanceof MenuEntry)
-            return false;
-            
         $menu = $this->addSubMenu($title, $callback, $callback_args, $count, $context_help);
         
         $menu->use_subheaders   = true;
@@ -151,11 +148,8 @@ class CombinedMenu extends StandardMenu
      * @param string $title Reference to title that should be displayed if this function returns true
      * @return bool Returns `true` if the menu should be displayed, `false` otherwise
      */
-    public function doRenderSubHeader($menu, &$title)
+    public function doRenderSubHeader(MenuEntry $menu, &$title)
     {
-        if ($menu instanceof MenuEntry === false)
-            return false;
-
         $active_parent_slug = $this->getActiveParentSlug();
     
         $res = (($menu->use_subheaders && $menu->parent_slug == $active_parent_slug) || $menu->slug == $active_parent_slug);

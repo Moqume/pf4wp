@@ -247,7 +247,7 @@ class MenuEntry
                 $this->hook = false;
                 break;
         }
-        
+
         $this->displayed = ($this->hook !== false);
         
         if ( $this->displayed ) {
@@ -281,8 +281,7 @@ class MenuEntry
     {
         $callback = $this->menu_properties['callback'];
         
-        // Double check user permissions vs. required permissions
-        var_dump($this->menu_properties['capability']);
+        // Extra permission check  (if bypassed in WordPress)
         if (!current_user_can($this->menu_properties['capability']))
             wp_die(__('You do not have sufficient permissions to access this page.'));
         

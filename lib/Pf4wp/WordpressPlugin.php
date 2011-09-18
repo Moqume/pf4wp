@@ -488,7 +488,7 @@ class WordpressPlugin
         
         if ( !empty($text) )
             printf(
-                '<tr class="active"><th></th><td colspan="2"><div class="plugin-description" style="padding: 0 0 5px;"><em>%s</em></div></td></tr>',
+                '<tr class="active"><th>&nbsp;</th><td colspan="2"><div class="plugin-description" style="padding: 0 0 5px;"><em>%s</em></div></td></tr>',
                 $text
             );
     }
@@ -539,9 +539,6 @@ class WordpressPlugin
         $current_screen = get_current_screen();
         
         if ($this->menu instanceof StandardMenu && ($active_menu = $this->menu->getActiveMenu()) !== false) {
-            //if (!current_user_can($active_menu->capability))
-            //    wp_die(__('You do not have sufficient permissions to access this page.'));
-            
             $context_help = $active_menu->context_help;
 
             // Set contextual help - this is not handled by the menu directly
