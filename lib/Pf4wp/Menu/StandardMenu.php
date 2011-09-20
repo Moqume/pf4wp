@@ -282,9 +282,8 @@ class StandardMenu
         foreach ($this->menus as $menu) {
             if (!$menu->isDisplayed()) {
                 $result = $menu->display();
-                if ($result) {
+                if ($result)
                     add_action('load-' . $menu->getHook(), array($this, 'onMenuLoad'));
-                }
             }
         }
     }

@@ -258,13 +258,11 @@ class MenuEntry
      */
     public function onMenuCallback()
     {
-        // Extra permission check  (if bypassed in WordPress)
-        if (!current_user_can($this->capability))
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-
         $callback       = $this->_properties['callback'];
         $callback_args  = $this->_properties['callback_args'];
         $per_page_id    = $this->_properties['slug'] . static::PER_PAGE_SUFFIX;
+        $per_page_def   = $this->per_page;
+        $capability     = $this->capability;
         
         // Perform 'before_callback' event
         ob_start();
@@ -276,9 +274,20 @@ class MenuEntry
                 $callback       = $result->_properties['callback'];
                 $callback_args  = $result->_properties['callback_args'];
                 $per_page_id    = $result->_properties['slug'] . static::PER_PAGE_SUFFIX;
+                $per_page_def   = $result->per_page;
+                $capability     = $result->capability;
             }
         }
         $before_callback_output = ob_get_clean();
+        
+        // Extra permission check (if bypassed in WordPress)
+        if (!current_user_can($capability))
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        
+        // Set final 'per page' variable
+        $per_page = (int)get_user_option($per_page_id);
+        if (empty($per_page))
+            $per_page = $per_page_def;
 
         /* Render page */
         
@@ -305,7 +314,7 @@ class MenuEntry
         // Perform user-defined callback
         echo '<div class="clear"></div><div>';
         if ( Helpers::validCallback($callback) )
-            call_user_func($callback, $callback_args, (int)get_user_option($per_page_id));
+            call_user_func($callback, $callback_args, $per_page);
         echo '</div>';
         
         // Perform 'afer_callback' event
