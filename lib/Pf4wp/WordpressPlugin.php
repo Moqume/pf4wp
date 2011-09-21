@@ -100,7 +100,7 @@ class WordpressPlugin
         if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
             $this->internal_options->version = $current_version;
             
-            $this->clearCache(); // May be called twice due to onActication(), but is here to prevent any potential issues if not called
+            $this->clearCache(); // May be called twice due to onActivation(), but is here to prevent any potential issues if not called
             
             $this->onUpgrade($previous_version, $current_version);
         }
@@ -291,7 +291,20 @@ class WordpressPlugin
         
         return false;
     }
+    
+    /**
+     * Retrieves the menu attached to this plugin
+     *
+     * @return StandardMenu|bool The menu or `false` if invalid
+     */
+    public function getMenu()
+    {
+        if ($this->menu instanceof StandardMenu)
+            return $this->menu;
         
+        return false;
+    }
+    
     /**
      * Generates an AJAX response
      *

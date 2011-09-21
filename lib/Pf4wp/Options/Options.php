@@ -106,11 +106,11 @@ abstract class Options
         } else {
             $options[$option] = $value;
         }
-                
-        $this->set($options);
         
         // Invalidate cached entry
         unset($this->cache[$option]);
+        
+        $this->set($options);
     }
     
     /**

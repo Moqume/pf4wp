@@ -57,7 +57,8 @@ class WordpressOptions extends Options
      */
     public function delete()
     {
-        parent::delete();
+        if (!parent::delete())
+            return false;
         
         $result = delete_option($this->name);
         

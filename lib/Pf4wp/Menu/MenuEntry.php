@@ -295,12 +295,15 @@ class MenuEntry
         
         // Render large icon
         if (!empty($this->large_icon)) {
-            if ( strpos($this->large_icon, '/') === false ) {
+            if ( strpos($this->large_icon, '/') === false && substr($this->large_icon, 0, strlen('data:')) != 'data:' ) {
                 // Use an icon by CSS ID
-                $icon = sprintf('id="%s"', $this->large_icon);
+                $icon = sprintf('id="%s"', $this->large_icon); 
             } else {
-                // Property contains a URL
-                $icon = sprintf('style="background: url(\'%s\') no-repeat scroll center center transparent"', $this->large_icon);
+                // Ensure SSL is used
+                $icon = is_ssl() ? preg_replace('#^http:#', 'https:', $this->large_icon) : $this->large_icon;
+                
+                // Use a background with specified URL or Data URI
+                $icon = sprintf('style="background: url(\'%s\') no-repeat scroll center center transparent"', $icon);
             }
         }
         printf('<div class="icon32" %s><br /></div>', (isset($icon)) ? $icon : 'id="icon-options-general"');
