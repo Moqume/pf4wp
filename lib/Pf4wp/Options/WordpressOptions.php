@@ -21,6 +21,30 @@ class WordpressOptions extends Options
     protected $options = array();
     
     /**
+     * Constructor
+     *
+     * @param string $name Name under which all options are stored
+     * @param array $defaults Default options
+     */
+    public function __construct($name, array $defaults = array())
+    {
+        parent::__construct($name, $defaults);
+        
+        // Ensure we're working with the right options on a multisite
+        add_action('switch_blog', array($this, '_invalidateOptions'), 10, 0);
+    }
+    
+    /**
+     * Invalidates the options
+     *
+     * Triggered by `pf4wp_blog_switched`
+     */
+    public function _invalidateOptions()
+    {
+        $this->options = array();
+    }    
+    
+    /**
      * Obtains options
      *
      * @return array Array containing options
@@ -31,7 +55,7 @@ class WordpressOptions extends Options
             $this->options = get_option($this->name);
             
             if ($this->options === false)
-                $this->options = array();
+                $this->_invalidateOptions();
         }
 
         return $this->options;
@@ -63,7 +87,7 @@ class WordpressOptions extends Options
         $result = delete_option($this->name);
         
         if ($result !== false)
-            $this->options = array();
+            $this->_invalidateOptions();
         
         return $result;
     }

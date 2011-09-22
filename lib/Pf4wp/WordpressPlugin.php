@@ -93,35 +93,9 @@ class WordpressPlugin
             if ( @file_exists($mofile) && @is_readable($mofile) )
                 load_textdomain($this->name, $mofile);
         }
-        
-        // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
-        $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
-       
-        if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
-            $this->internal_options->version = $current_version;
-            
-            $this->clearCache(); // May be called twice due to onActivation(), but is here to prevent any potential issues if not called
-            
-            $this->onUpgrade($previous_version, $current_version);
-        }
-        
-        // Template Engine (currently Twig)
-        $views_dir = $this->getPluginDir() . static::VIEWS_DIR;
-        
-        if (@is_dir($views_dir) && @is_readable($views_dir)) {
-            $options = array();
-            
-            if (defined('WP_DEBUG') && WP_DEBUG)
-                $options = array_merge($options, array('debug' => true));
-            
-            if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
-                $options = array_merge($options, array('cache' => $cache));
-            
-            $this->template = new TwigEngine($views_dir, $options);
-        } else {
-            // Provide a safe fallback
-            $this->template = new NullEngine();
-        }        
+
+        // pre-Initialize the template engine to a Null provider
+        $this->template = new NullEngine();        
         
         // Register uninstall and (de)activation hooks
         register_activation_hook(plugin_basename($this->plugin_file), array($this, '_onActivation'));
@@ -129,7 +103,8 @@ class WordpressPlugin
         register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
         
         // Oddly, this is called before the WordPress 'init'
-        add_action('widgets_init', array($this, 'onWidgetRegister'));
+        if ( !Helpers::isNetworkAdminMode() )
+            add_action('widgets_init', array($this, 'onWidgetRegister'));
     }
     
     /**
@@ -211,13 +186,32 @@ class WordpressPlugin
     /**
      * Registers all actions, hooks and filters to provide full functionality/event triggers
      *
+     * Will not trigger if the plugin is in Network Admin mode.
+     *
      * @see construct()
      */
     public function register_actions()
     {
-        if ($this->registered || empty($this->plugin_file))
+        if ($this->registered || empty($this->plugin_file) || Helpers::isNetworkAdminMode())
             return;
+        
+        // Template Engine (currently Twig)
+        $views_dir = $this->getPluginDir() . static::VIEWS_DIR;
+        
+        if (@is_dir($views_dir) && @is_readable($views_dir)) {
+            $options = array();
             
+            if (defined('WP_DEBUG') && WP_DEBUG)
+                $options = array_merge($options, array('debug' => true));
+            
+            if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
+                $options = array_merge($options, array('cache' => $cache));
+            
+            $this->template = new TwigEngine($views_dir, $options);
+        } else {
+            // Provide a safe fallback
+            $this->template = new NullEngine();
+        }
     
         /* A note on the use of "$this" versus the often seen "&$this": In PHP5 a copy of the object is 
          * only returned when using "clone". Also, for other use of references, the Zend Engine employs 
@@ -252,14 +246,6 @@ class WordpressPlugin
     public function getName()
     {
         return $this->name;
-    }
-    
-    /**
-     * Check if we are currently in Network Admin mode (for Multisite)
-     */
-    public function isNetworkAdminMode()
-    {
-        return (defined('WP_NETWORK_ADMIN') && WP_NETWORK_ADMIN);
     }
         
     /**
@@ -420,6 +406,28 @@ class WordpressPlugin
         $this->internal_options->delayed_notices = array();
     }
     
+    /**
+     * Performs common _onActivation() actions
+     *
+     * @see _onActivation()
+     */
+    private function doOnActivation()
+    {
+        // Clear managed cache
+        $this->clearCache();
+        
+        // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
+        $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
+       
+        if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
+            $this->internal_options->version = $current_version;
+            
+            $this->onUpgrade($previous_version, $current_version);
+        }
+        
+        $this->onActivation();
+    }
+    
     /*---------- Private events (the scope is public, due to external calling). ----------*/
     
     /**
@@ -431,11 +439,31 @@ class WordpressPlugin
     {
         if (!is_admin())
             return;
+            
+        $this->doOnActivation();            
         
-        // Clear managed cache
-        $this->clearCache();
-        
-        $this->onActivation();
+        if (Helpers::isNetworkAdminMode() && function_exists('switch_to_blog')) {
+            /* If we're in Network Admin mode, we iterate through all blogs so that
+             * the plugin can be independently activated.
+             */
+            global $wpdb, $blog_id, $switched_stack;
+            
+            $original_blog_id = $blog_id;
+            $all_blog_ids     = $wpdb->get_col( $wpdb->prepare("SELECT blog_id FROM {$wpdb->blogs}") );
+
+            foreach ($all_blog_ids as $a_blog_id) {
+                if ($original_blog_id != $a_blog_id) {
+                    switch_to_blog($a_blog_id);
+                    $this->doOnActivation();
+                }
+            }
+            
+            // Switch back to the original blog
+            switch_to_blog($original_blog_id);
+            
+            // Reset the global $switched_stack, as we're back at the original now. This is faster than restore_current_blog()
+            $switched_stack = array();
+        }
     }
     
     /**

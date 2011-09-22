@@ -27,21 +27,42 @@ abstract class Options
      * Constructor
      *
      * @param string $name Name under which all options are stored
-     * @param array $default Default options
+     * @param array $defaults Default options
      */
     public function __construct($name, array $defaults = array())
     {
         $this->name = $name;
        
         $this->setDefaults($defaults);
+        
+        // Ensure we're working with the right options on a multisite
+        add_action('switch_blog', array($this, '_invalidateCache'), 10, 0);
     }
-    
+        
+    /**
+     * Sets the defaults
+     *
+     * @param array $defaults Default options
+     */
     public function setDefaults(array $defaults)
     {
         $this->defaults = $defaults;
         
-        // Invalidate cache
-        $this->cache = array();        
+        $this->_invalidateCache();
+    }
+    
+    /**
+     * Invalidate the working memory cache
+     *
+     * @param string $option Specific option to invalidate
+     */
+    public function _invalidateCache($option = null)
+    {
+        if (is_null($option)) {
+            $this->cache = array();
+        } else {
+            unset($this->cache[$option]);
+        }
     }
     
     /**
@@ -107,8 +128,7 @@ abstract class Options
             $options[$option] = $value;
         }
         
-        // Invalidate cached entry
-        unset($this->cache[$option]);
+        $this->_invalidateCache($option);
         
         $this->set($options);
     }
@@ -150,7 +170,7 @@ abstract class Options
     public function delete()
     {
         // Invalidate cache
-        $this->cache = array();
+        $this->_invalidateCache();
         
         return true;
     }    

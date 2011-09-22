@@ -19,6 +19,20 @@ namespace Pf4wp\Common;
 class Helpers
 {
     /**
+     * Check if we are currently in a Network Admin mode (Multisite)
+     *
+     * @return bool Returns `true` if we are currently in Network Admin mode, `false` otherwise.
+     */
+    public static function isNetworkAdminMode()
+    {
+        // Always return false if multisite isn't enabled, regardless of what WP_NETWORK_ADMIN says
+        if (function_exists('is_multisite') && !is_multisite())
+            return false;
+            
+        return (defined('WP_NETWORK_ADMIN') && WP_NETWORK_ADMIN);
+    }    
+    
+    /**
      * Converts a string into a fairly unique, short slug
      *
      * @param string $string String to convert to a slug
