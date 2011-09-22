@@ -253,6 +253,14 @@ class WordpressPlugin
     {
         return $this->name;
     }
+    
+    /**
+     * Check if we are currently in Network Admin mode (for Multisite)
+     */
+    public function isNetworkAdminMode()
+    {
+        return (defined('WP_NETWORK_ADMIN') && WP_NETWORK_ADMIN);
+    }
         
     /**
      * Returns the plugin directory
