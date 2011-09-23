@@ -636,6 +636,9 @@ class WordpressPlugin
         
         $url = $this->getParentMenuUrl();
         
+        if ( !is_array($actions) )
+            $actions = array();
+               
         if ( !empty($url) )
             array_unshift($actions, sprintf(
                 '<a href="%s" title="%s">%s</a>', 
