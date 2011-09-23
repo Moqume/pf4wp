@@ -40,6 +40,8 @@ class MenuEntry
     
     private $hook = false;
     private $displayed = false;
+
+    protected $textdomain = '';
     
     /** Internal properties, best not modified directly */
     public $_properties = array(
@@ -79,6 +81,16 @@ class MenuEntry
     
     /** The label of the 'per page' items */
     public $per_page_label = '';
+    
+    /**
+     * Constructor
+     *
+     * @param string $textdomain The textdomain to use for translations
+     */
+    public function __construct($textdomain = '')
+    {
+        $this->textdomain = $textdomain;
+    }
     
     /**
      * Checks if the current menu item is active (selected)
@@ -282,7 +294,7 @@ class MenuEntry
         
         // Extra permission check (if bypassed in WordPress)
         if (!current_user_can($capability))
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            wp_die(__('You do not have sufficient permissions to access this page.', $this->textdomain));
         
         // Set final 'per page' variable
         $per_page = (int)get_user_option($per_page_id);

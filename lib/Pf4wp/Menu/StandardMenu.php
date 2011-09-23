@@ -26,6 +26,7 @@ class StandardMenu
     private $displayed = false;
     private $id = 'pf4wp';
     
+    protected $textdomain = ''; // For translations
     protected $menus = array(); // Read only public
     protected $parent = '';     // Parent menu
     protected $capability = ''; // Default, determined by the type of menu. @see MenuEntry
@@ -42,11 +43,16 @@ class StandardMenu
     
     /**
      * Constructor
+     *
+     * @param string $id A unique ID to avoiding menu slug collisions
+     * @param string $textdomain The textdomain for translations
      */
-    public function __construct($id = '')
+    public function __construct($id = '', $textdomain = '')
     {
         if (!empty($id))
             $this->id = $id;
+        
+        $this->textdomain = (empty($textdomain) && !empty($id)) ? $id : $textdomain;
     }
         
     /**
@@ -223,7 +229,7 @@ class StandardMenu
      */
     public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {
-        $menu = new MenuEntry();
+        $menu = new MenuEntry($this->id);
         
         $menu->title      = $title;
         $menu->capability = $this->capability;
@@ -340,7 +346,7 @@ class StandardMenu
                 // add_screen_option handles get_user_option, no need to pass value
                 add_screen_option('per_page',
                     array(
-                        'label'   => (empty($active_menu->per_page_label)) ? __('items per page') : $active_menu->per_page_label,
+                        'label'   => (empty($active_menu->per_page_label)) ? __('items per page', $this->textdomain) : $active_menu->per_page_label,
                         'option'  => $per_page_id,
                         'default' => (int)$active_menu->per_page,
                     )

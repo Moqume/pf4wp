@@ -89,8 +89,9 @@ class WordpressPlugin
         // Load locales
         $locale = get_locale();
         if ( !empty($locale) ) {
-            $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $this->name . '-' . $locale . '.mo';	
-            if ( @file_exists($mofile) && @is_readable($mofile) )
+            $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $locale . '.mo';
+            
+            if ( @file_exists($mofile) && @is_readable($mofile) ) 
                 load_textdomain($this->name, $mofile);
         }
 
@@ -574,7 +575,7 @@ class WordpressPlugin
      * Calls delayed onActivation() and adds hooks for menu entries 
      * returned by onBuildMenu(), if any.
      *
-     * @see onActivation(), onAdminInit(), onBuildMenu()
+     * @see onAdminInit(), onBuildMenu()
      */
     final public function _onAdminRegister()
     {

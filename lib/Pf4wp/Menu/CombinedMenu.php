@@ -28,11 +28,11 @@ class CombinedMenu extends StandardMenu
     /**
      * Constructor
      */
-    public function __construct($id = '')
+    public function __construct($id = '', $textdomain = '')
     {
-        parent::__construct($id);
+        parent::__construct($id, $textdomain);
         
-        $this->home_title = __('Home');
+        $this->home_title = __('Home', $this->textdomain);
     }
     
     /**
