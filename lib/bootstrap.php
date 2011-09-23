@@ -97,7 +97,7 @@ if (extension_loaded('apc')) {
     if (!class_exists('Symfony\Component\ClassLoader\ApcUniversalClassLoader'))
         require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/ApcUniversalClassLoader.php';
 
-    $_pf4wp_ucl = new Symfony\Component\ClassLoader\ApcUniversalClassLoader('pf4wp.'.plugin_basename(dirname($_pf4wp_file)).'.ucl.');
+    $_pf4wp_ucl = new Symfony\Component\ClassLoader\ApcUniversalClassLoader('pf4wp.' . md5($_pf4wp_file) . '.ucl.');
 } else {
     if (!defined('PF4WP_APC'))
         define('PF4WP_APC', false);

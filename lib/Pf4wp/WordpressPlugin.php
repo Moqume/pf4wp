@@ -39,7 +39,7 @@ class WordpressPlugin
 {
     const LOCALIZATION_DIR = 'resources/l10n/';
     const VIEWS_DIR        = 'resources/views/';
-    const VIEWS_CACHE_DIR  = 'store/cache/';
+    const VIEWS_CACHE_DIR  = 'store/cache/views/';
     
     private static $instances = array();            // Instance container
     private $registered = false;                    // Whether the plugin has been registered with WordPress
@@ -102,7 +102,7 @@ class WordpressPlugin
         register_deactivation_hook(plugin_basename($this->plugin_file), array($this, '_onDeactivation'));
         register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
         
-        // Register action for when a new blog is create on multisites
+        // Register an action for when a new blog is created on multisites
         if (function_exists('is_multisite') && is_multisite())
             add_action('wpmu_new_blog', array($this, '_onNewBlog'), 10, 1);
         
@@ -217,7 +217,7 @@ class WordpressPlugin
             
             if (defined('WP_DEBUG') && WP_DEBUG)
                 $options = array_merge($options, array('debug' => true));
-            
+
             if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
                 $options = array_merge($options, array('cache' => $cache));
             
@@ -361,7 +361,7 @@ class WordpressPlugin
     }
     
     /**
-     * Clears (purges) any managed caches
+     * Clears (purges) any plugin-wide managed caches
      */
     public function clearCache()
     {
@@ -429,8 +429,8 @@ class WordpressPlugin
         // Perform action on the current blog first
         call_user_func_array($action, $args);            
         
-        // If multisite and in Network Admin mode, iterate all other blogs
-        if (Helpers::isNetworkAdminMode() && function_exists('switch_to_blog')) {
+        // If in Network Admin mode and called by site admin, iterate all other blogs
+        if (Helpers::isNetworkAdminMode() && is_super_admin()) {
             global $wpdb, $blog_id, $switched, $switched_stack;
             
             $orig_switched_stack = $switched_stack;  // global $switched_stack
@@ -462,7 +462,7 @@ class WordpressPlugin
      */
     public function _doOnActivation()
     {
-        // Clear managed cache
+        // Clear the plugin-wide managed cache
         $this->clearCache();
         
         // Check for upgrade
@@ -499,7 +499,7 @@ class WordpressPlugin
      */
     public function _doOnUninstall()
     {
-        // Clear the managed cache
+        // Clear the plugin-wide managed cache
         $this->clearCache();
 
         // Delete our options from the WP database
@@ -515,7 +515,7 @@ class WordpressPlugin
     /**
      * Event called when a new blog is added (multisite)
      *
-     * Here we activate our plugin for the new blog, if it is enabled site-wide. This is
+     * Here we activate this plugin for the new blog, if it is enabled site-wide. This is
      * because the _onActivate() event will not be triggered if the plugin is already activated
      * site-wide. See wp-includes/ms-functions.php; wpmu_create_blog()
      * 
@@ -618,7 +618,7 @@ class WordpressPlugin
         
         if ( !empty($text) )
             printf(
-                '<tr class="active"><th>&nbsp;</th><td colspan="2"><div class="plugin-description" style="padding: 0 0 5px;"><em>%s</em></div></td></tr>',
+                '<tr class="active column-description"><th>&nbsp;</th><td colspan="2"><div class="plugin-description" style="padding: 0 0 5px;"><em>%s</em></div></td></tr>',
                 $text
             );
     }
@@ -677,8 +677,8 @@ class WordpressPlugin
         echo (
             '<script type="text/javascript">' . PHP_EOL .
             '//<![CDATA[' . PHP_EOL . 
-            'var ajaxaction = \'' . $this->name . '\';' .
-            'var ajaxnonce = \'' . wp_create_nonce($this->name . '-ajax-call') . '\';' .
+            'var ajaxaction = \'' . $this->name . '\'; ' .
+            'var ajaxnonce = \'' . wp_create_nonce($this->name . '-ajax-call') . '\'; ' .
             'var ajaxnonceresponse = \'' . wp_create_nonce($this->name . '-ajax-response') . '\';' . PHP_EOL .
             '//]]>' . PHP_EOL .
             '</script>' . PHP_EOL
