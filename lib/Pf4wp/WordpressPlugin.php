@@ -32,7 +32,7 @@ use Pf4wp\Template\TwigEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 0.0.1
+ * @version 0.0.2
  * @package Pf4wp
  */
 class WordpressPlugin
@@ -99,12 +99,16 @@ class WordpressPlugin
         
         // Register uninstall and (de)activation hooks
         register_activation_hook(plugin_basename($this->plugin_file), array($this, '_onActivation'));
-        register_deactivation_hook(plugin_basename($this->plugin_file), array($this, 'onDeactivation'));
+        register_deactivation_hook(plugin_basename($this->plugin_file), array($this, '_onDeactivation'));
         register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
         
-        // Oddly, this is called before the WordPress 'init'
+        // Register action for when a new blog is create on multisites
+        if (function_exists('is_multisite') && is_multisite())
+            add_action('wpmu_new_blog', array($this, '_onNewBlog'), 10, 1);
+        
+        // Oddly, this is called before the WordPress 'init' - why?
         if ( !Helpers::isNetworkAdminMode() )
-            add_action('widgets_init', array($this, 'onWidgetRegister'));
+            add_action('widgets_init', array($this, 'onWidgetRegister'), 10, 0);
     }
     
     /**
@@ -137,7 +141,7 @@ class WordpressPlugin
         }
         
         if ($auto_register === true)
-            self::$instances[$class]->register_actions();
+            self::$instances[$class]->registerActions();
 
         return self::$instances[$class];
     }    
@@ -186,15 +190,25 @@ class WordpressPlugin
     /**
      * Registers all actions, hooks and filters to provide full functionality/event triggers
      *
-     * Will not trigger if the plugin is in Network Admin mode.
+     * A note on the use of "$this" versus the often seen "&$this": In PHP5 a copy of the object is 
+     * only returned when using "clone". Also, for other use of references, the Zend Engine employs 
+     * a "copy-on-write" logic, meaning that variables will be referenced instead of copied until 
+     * it's actually written to. Do not circumvent Zend's optimizations!
      *
      * @see construct()
      */
-    public function register_actions()
+    public function registerActions()
     {
-        if ($this->registered || empty($this->plugin_file) || Helpers::isNetworkAdminMode())
+        if ($this->registered || empty($this->plugin_file))
             return;
         
+        // Plugin events (also in Multisite)
+        add_action('after_plugin_row_' . plugin_basename($this->plugin_file), array($this, '_onAfterPluginText'), 10, 0);
+
+        /* Do not register any actions after this if we're in Network Admin mode */
+        if (Helpers::isNetworkAdminMode())
+            return;
+
         // Template Engine (currently Twig)
         $views_dir = $this->getPluginDir() . static::VIEWS_DIR;
         
@@ -213,26 +227,19 @@ class WordpressPlugin
             $this->template = new NullEngine();
         }
     
-        /* A note on the use of "$this" versus the often seen "&$this": In PHP5 a copy of the object is 
-         * only returned when using "clone". Also, for other use of references, the Zend Engine employs 
-         * a "copy-on-write" logic, meaning that variables will be referenced instead of copied until 
-         * it's actually written to. Do not circumvent Zend's optimizations!
-         */
-        
         // Internal and Admin events
-        add_action('admin_menu', array($this, '_onAdminRegister'));
-        add_action('wp_dashboard_setup', array($this, 'onDashboardWidgetRegister'));
-        add_action('admin_notices',	array($this, '_onAdminNotices'));
+        add_action('admin_menu', array($this, '_onAdminRegister'), 10, 0);
+        add_action('wp_dashboard_setup', array($this, 'onDashboardWidgetRegister'), 10, 0);
+        add_action('admin_notices',	array($this, '_onAdminNotices'), 10, 0);
         
-		// Plugin listing events
-        add_action('after_plugin_row_' . plugin_basename($this->plugin_file), array($this, '_onAfterPluginText'));
+		// Plugin events
         add_filter('plugin_action_links_' . plugin_basename($this->plugin_file), array($this, '_onPluginActionLinks'), 10, 1);
         
         // Public events
-        add_action('parse_request',	array($this, '_onPublicInit'));
+        add_action('parse_request',	array($this, '_onPublicInit'), 10, 0);
         
         // AJAX events
-        add_action('wp_ajax_' . $this->name, array($this, '_onAjaxCall'));
+        add_action('wp_ajax_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
         
         // Done!
         $this->registered = true;
@@ -324,21 +331,6 @@ class WordpressPlugin
     }
     
     /**
-     * Attaches common Admin events to menu hooks
-     * 
-     * @see _onAdminRegister()
-     * @param string Hook provided by WordPress for the menu item
-     */    
-    private function attachAdminLoadHooks($hook) {
-        if (empty($hook))
-            return;
-            
-        add_action('load-' . $hook,                array($this, '_onAdminLoad'));
-        add_action('admin_print_scripts-' . $hook, array($this, '_onAdminScripts'));
-        add_action('admin_print_styles-' . $hook,  array($this, 'onAdminStyles'));
-    }
-    
-    /**
      * Registers a sidebar (theme) widget
      *
      * It adds an additional call immediately after normal registration
@@ -406,17 +398,74 @@ class WordpressPlugin
         $this->internal_options->delayed_notices = array();
     }
     
+    /*---------- Private Helpers (callbacks have a public scope!) ----------*/
+    
+    /**
+     * Attaches common Admin events to menu hooks
+     * 
+     * @see _onAdminRegister()
+     * @param string Hook provided by WordPress for the menu item
+     */    
+    private function attachAdminLoadHooks($hook) {
+        if (empty($hook))
+            return;
+            
+        add_action('load-' . $hook,                array($this, '_onAdminLoad'));
+        add_action('admin_print_scripts-' . $hook, array($this, '_onAdminScripts'));
+        add_action('admin_print_styles-' . $hook,  array($this, 'onAdminStyles'));
+    }
+    
+    /**
+     * Iterates blogs, performing an action after each switch (multisite)
+     *
+     * @param object $action Action to perform
+     * @param mixed $args Array containing parameters to pass to the action
+     */
+    private function iterateBlogsAction($action, array $args = array())
+    {
+        if (!Helpers::validCallback($action))
+            return;
+            
+        // Perform action on the current blog first
+        call_user_func_array($action, $args);            
+        
+        // If multisite and in Network Admin mode, iterate all other blogs
+        if (Helpers::isNetworkAdminMode() && function_exists('switch_to_blog')) {
+            global $wpdb, $blog_id, $switched, $switched_stack;
+            
+            $orig_switched_stack = $switched_stack;  // global $switched_stack
+            $orig_switched       = $switched;        // global $switched 
+            $orig_blog_id        = $blog_id;         // global $blog_id
+            $all_blog_ids        = $wpdb->get_col( $wpdb->prepare("SELECT blog_id FROM {$wpdb->blogs} WHERE blog_id <> %d", $orig_blog_id) ); // global $wpdb
+
+            foreach ($all_blog_ids as $a_blog_id) {
+                switch_to_blog($a_blog_id);
+                call_user_func_array($action, $args);
+            }
+            
+            // Switch back to the original blog
+            switch_to_blog($orig_blog_id);
+            
+            /* Reset the global $switched and $switched_stack, as we're back at the original now. 
+             * This is faster than calling restore_current_blog() after each completed switch. 
+             * See wp-includes/ms-blogs.php.
+             */
+            $switched       = $orig_switched;       // global $switched 
+            $switched_stack = $orig_switched_stack; // global $switched_stack
+        }
+    }
+    
     /**
      * Performs common _onActivation() actions
      *
-     * @see _onActivation()
+     * @see _onActivation(), onActivation()
      */
-    private function doOnActivation()
+    public function _doOnActivation()
     {
         // Clear managed cache
         $this->clearCache();
         
-        // Check for upgrade - done before any other events, to allow user-defined upgrades, etc.
+        // Check for upgrade
         $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
        
         if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
@@ -425,68 +474,102 @@ class WordpressPlugin
             $this->onUpgrade($previous_version, $current_version);
         }
         
+        // Call user-defined event
         $this->onActivation();
+    }
+    
+    /**
+     * Performs common _onDeactivation() actions
+     *
+     * @see _onDeactivation(), onDeactivation()
+     */
+    public function _doOnDeactivation()
+    {
+        // Clear delayed notices
+        $this->clearDelayedNotices();
+        
+        // Call user-defined event
+        $this->onDeactivation();
+    }    
+    
+    /**
+     * Performs common _onUninstall() actions
+     *
+     * @see _onUninstal(), onUninstall()
+     */
+    public function _doOnUninstall()
+    {
+        // Clear the managed cache
+        $this->clearCache();
+
+        // Delete our options from the WP database
+        $this->options->delete();
+        $this->internal_options->delete();
+        
+        // Call user-defined event
+        $this->onUninstall();
     }
     
     /*---------- Private events (the scope is public, due to external calling). ----------*/
     
     /**
+     * Event called when a new blog is added (multisite)
+     *
+     * Here we activate our plugin for the new blog, if it is enabled site-wide. This is
+     * because the _onActivate() event will not be triggered if the plugin is already activated
+     * site-wide. See wp-includes/ms-functions.php; wpmu_create_blog()
+     * 
+     * @see _doOnActivation()
+     * @param int $blog_id The new blog ID (provided by WP Action)
+     */
+    final public function _onNewBlog($blog_id)
+    {
+        if (($active_sitewide_plugins = get_site_option('active_sitewide_plugins')) !== false &&
+            array_key_exists(plugin_basename($this->plugin_file), $active_sitewide_plugins)) {
+            // Switch to the new blog
+            switch_to_blog($blog_id);
+            
+            // Perform common _onActivation tasks just for the new blog
+            $this->_doOnActivation();
+            
+            // Go back to the original blog
+            restore_current_blog();
+        }
+    }
+    
+    /**
      * Event called when the plugin is activated
      *
-     * @see onActivation()
+     * @see onActivation(), _doOnActivation()
      */
     final public function _onActivation()
     {
-        if (!is_admin())
-            return;
-            
-        $this->doOnActivation();            
-        
-        if (Helpers::isNetworkAdminMode() && function_exists('switch_to_blog')) {
-            /* If we're in Network Admin mode, we iterate through all blogs so that
-             * the plugin can be independently activated.
-             */
-            global $wpdb, $blog_id, $switched_stack;
-            
-            $original_blog_id = $blog_id;
-            $all_blog_ids     = $wpdb->get_col( $wpdb->prepare("SELECT blog_id FROM {$wpdb->blogs}") );
-
-            foreach ($all_blog_ids as $a_blog_id) {
-                if ($original_blog_id != $a_blog_id) {
-                    switch_to_blog($a_blog_id);
-                    $this->doOnActivation();
-                }
-            }
-            
-            // Switch back to the original blog
-            switch_to_blog($original_blog_id);
-            
-            // Reset the global $switched_stack, as we're back at the original now. This is faster than restore_current_blog()
-            $switched_stack = array();
-        }
+        $this->iterateBlogsAction(array($this, '_doOnActivation'));
     }
+    
+    /**
+     * Event called when the plugin is deactivated
+     *
+     * @see onDeactivation(), _doOnDeactivation()
+     */
+    final public function _onDeactivation()
+    {
+        $this->iterateBlogsAction(array($this, '_doOnDeactivation'));
+    }    
     
     /**
      * Static function called when the plugin is uninstalled
      *
      * Note: Remember to use the full namespace when calling this function!
      *
-     * @see onUninstall()
+     * @see onUninstall(), _doOnUninstall()
      */
     final public static function _onUninstall()
     {
         $this_instance = self::instance('', false);
-
-        // Clear the managed cache
-        $this_instance->clearCache();
-
-        // Delete our options from the WP database
-        $this_instance->options->delete();
-        $this_instance->internal_options->delete();
         
-        $this_instance->onUninstall();
+        $this_instance->iterateBlogsAction(array($this_instance, '_doOnUninstall'));
     }
-    
      
     /**
      * Register the plugin on the administrative backend (Dashboard) - Stage 1
@@ -588,6 +671,9 @@ class WordpressPlugin
      */
     final public function _onAdminScripts()
     {
+        if (!is_admin())
+            return;
+            
         echo (
             '<script type="text/javascript">' . PHP_EOL .
             '//<![CDATA[' . PHP_EOL . 

@@ -54,6 +54,8 @@ abstract class Options
     /**
      * Invalidate the working memory cache
      *
+     * Private function on a public scope, as it is also called on `switch_blog` action.
+     *
      * @param string $option Specific option to invalidate
      */
     public function _invalidateCache($option = null)

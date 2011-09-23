@@ -76,11 +76,16 @@ class PluginInfo
         
         // Do we need to filter it by active plugins only?
         if ( $active_only ) {
-            if ( ($active_plugins = get_option('active_plugins')) !== false ) {
-                $result = array_intersect_key($result, array_flip($active_plugins));
-            } else {
-                $result = array();
+            if (($active_plugins = get_option('active_plugins')) === false)
+                $active_plugins = array();
+            
+            // Include plugins that are activated site-wide
+            if (function_exists('is_multisite') && is_multisite()) {
+                if (($active_sitewide_plugins = get_site_option('active_sitewide_plugins')) !== false)
+                    $active_plugins = array_merge($active_plugins, array_keys($active_sitewide_plugins));
             }
+
+            $result = array_intersect_key($result, array_flip($active_plugins));           
         }
         
         if ( !empty($result) && $name ) {

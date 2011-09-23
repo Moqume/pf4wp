@@ -37,7 +37,7 @@ class WordpressOptions extends Options
     /**
      * Invalidates the options
      *
-     * Triggered by `pf4wp_blog_switched`
+     * Private function on a public scope, as it is also called on `switch_blog` action.
      */
     public function _invalidateOptions()
     {
