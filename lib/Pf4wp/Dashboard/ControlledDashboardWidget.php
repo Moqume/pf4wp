@@ -47,7 +47,7 @@ class ControlledDashboardWidget extends DashboardWidget
         
         $data = null;
         
-        if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['widget_id']) && $_POST['widget_id'] == $this->name) {
+        if (isset($_POST['widget_id']) && $_POST['widget_id'] == $this->name) {
             // Verify nonce
             if (isset($_POST['_nonce']) && wp_verify_nonce($_POST['_nonce'], $this->name.'-control')) {
                 $data = $_POST;

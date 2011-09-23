@@ -94,7 +94,7 @@ class WordpressPlugin
                 load_textdomain($this->name, $mofile);
         }
 
-        // pre-Initialize the template engine to a Null provider
+        // pre-Initialize the template engine to a `null` engine
         $this->template = new NullEngine();        
         
         // Register uninstall and (de)activation hooks
@@ -106,7 +106,7 @@ class WordpressPlugin
         if (function_exists('is_multisite') && is_multisite())
             add_action('wpmu_new_blog', array($this, '_onNewBlog'), 10, 1);
         
-        // Oddly, this is called before the WordPress 'init' - why?
+        // Widgets get initialized individually (and before WP `init` action) - PITA!
         if ( !Helpers::isNetworkAdminMode() )
             add_action('widgets_init', array($this, 'onWidgetRegister'), 10, 0);
     }
@@ -222,9 +222,6 @@ class WordpressPlugin
                 $options = array_merge($options, array('cache' => $cache));
             
             $this->template = new TwigEngine($views_dir, $options);
-        } else {
-            // Provide a safe fallback
-            $this->template = new NullEngine();
         }
     
         // Internal and Admin events
@@ -429,8 +426,8 @@ class WordpressPlugin
         // Perform action on the current blog first
         call_user_func_array($action, $args);            
         
-        // If in Network Admin mode and called by site admin, iterate all other blogs
-        if (Helpers::isNetworkAdminMode() && is_super_admin()) {
+        // If in Network Admin mode, iterate all other blogs
+        if (Helpers::isNetworkAdminMode()) {
             global $wpdb, $blog_id, $switched, $switched_stack;
             
             $orig_switched_stack = $switched_stack;  // global $switched_stack
@@ -599,6 +596,9 @@ class WordpressPlugin
                 foreach ($menus as $menu_entry)
                     $this->attachAdminLoadHooks($menu_entry->getHook());
             }
+            
+            // Display menu (if not already displayed)
+            $this->menu->display();
         } else if (is_string($result)) {
             $this->attachAdminLoadHooks($result);
         }
@@ -718,8 +718,7 @@ class WordpressPlugin
 
         header('Content-type: application/json');
 
-        if ( $_SERVER['REQUEST_METHOD'] != 'POST' ||
-             !isset($_POST['func']) ||
+        if ( !isset($_POST['func']) ||
              !isset($_POST['data']) ) 
             $this->ajaxResponse(__('Malformed AJAX Request', $this->name), true);
 

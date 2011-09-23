@@ -320,8 +320,7 @@ class StandardMenu
             // Manage 'per page' screen settings
             $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
             
-            if ($_SERVER['REQUEST_METHOD'] == 'POST' &&
-                isset($_POST['screen-options-apply']) &&
+            if (isset($_POST['screen-options-apply']) &&
                 isset($_POST['wp_screen_options']['value']) &&
                 isset($_POST['wp_screen_options']['option']) && $_POST['wp_screen_options']['option'] == $per_page_id &&
                 wp_verify_nonce($_POST['screenoptionnonce'], 'screen-options-nonce')) {
