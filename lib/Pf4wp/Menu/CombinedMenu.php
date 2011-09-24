@@ -175,12 +175,12 @@ class CombinedMenu extends StandardMenu
         foreach ($this->menus as $menu) {
             if ($this->doRenderSubHeader($menu, $title)) {
                 $is_active = ($active_menu == $menu);
-                
-                $title = ($menu->count !== false) ? sprintf('%s <span class="count">(%d)</span>', $title, $menu->count) : $title;
+                $title     = ($menu->count !== false) ? sprintf('%s <span class="count">(%d)</span>', $title, $menu->count) : $title;
+                $url       = (empty($menu->_properties['parent_slug'])) ? menu_page_url($menu->_properties['slug'], false) : add_query_arg(array(self::SUBMENU_ID=>$menu->_properties['slug']), menu_page_url($menu->_properties['parent_slug'], false));
                 
 				$subheaders[] = sprintf(
                     '<li><a href="%s" %s>%s</a>', 
-                    htmlspecialchars(add_query_arg(array(self::SUBMENU_ID=>$menu->_properties['slug']))),
+                    htmlspecialchars($url),
                     ($is_active) ? 'class="current"' : '',
                     $title
                 );
