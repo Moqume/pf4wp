@@ -224,7 +224,7 @@ class WordpressPlugin
             
             $this->template = new TwigEngine($views_dir, $options);
             
-            
+            // Add Twig translation extension automatically
             $translate_extension = new \Pf4wp\Template\Extensions\Twig\Translate();
             $translate_extension->setTextDomain($this->name);
             
