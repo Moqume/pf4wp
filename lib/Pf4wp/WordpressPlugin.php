@@ -32,7 +32,7 @@ use Pf4wp\Template\TwigEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 0.0.2
+ * @version 0.0.3
  * @package Pf4wp
  */
 class WordpressPlugin
@@ -223,6 +223,12 @@ class WordpressPlugin
                 $options = array_merge($options, array('cache' => $cache));
             
             $this->template = new TwigEngine($views_dir, $options);
+            
+            
+            $translate_extension = new \Pf4wp\Template\Extensions\Twig\Translate();
+            $translate_extension->setTextDomain($this->name);
+            
+            $this->template->getEngine()->addExtension($translate_extension);
         }
     
         // Internal and Admin events

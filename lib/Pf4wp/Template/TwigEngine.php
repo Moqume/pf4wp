@@ -36,6 +36,14 @@ class TwigEngine implements EngineInterface
     }
     
     /**
+     * Returns the actual Twig engine instance
+     */
+    public function getEngine()
+    {
+        return $this->engine;
+    }
+    
+    /**
      * Loads the given template
      *
      * @param mixed $name A template name or an instance of Twig_Template
