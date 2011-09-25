@@ -62,7 +62,7 @@ class SimpleSchema
         $inserts    = array(); // Insert statements
 
         foreach($schema as $query) {
-            $query = trim(str_replace(array('{#prefix#}', '{#charset_collate#}'), array(static::prefix(), $charset_collate), $query));
+            $query = trim(str_replace(array('{#prefix#}', '{#charset_collate#}'), array($wpdb->prefix, $charset_collate), $query));
 
             if (!empty($query)) {
                 if (preg_match('#^CREATE TABLE (?:IF NOT EXISTS )?([^ ]*)#i', $query, $matches)) {
@@ -204,28 +204,4 @@ class SimpleSchema
         
         return true;
     }
-    
-    /**
-     * Simply returns the wpdb global
-     *
-     * @return \wpdb The wpdb object
-     */
-    final public static function db()
-    {
-        global $wpdb;
-        
-        return $wpdb;
-    }
-    
-    /**
-     * Returns the prefix currently being used
-     *
-     * @return string The prefix to use add to table names
-     */
-    public static function prefix()
-    {
-        global $wpdb;
-        
-        return $wpdb->get_blog_prefix();
-    }    
 }
