@@ -21,6 +21,7 @@ use Pf4wp\Common\Helpers;
 class StandardMenu
 {
     const PRE_MENU_CALLBACK_SUFFIX = 'Load';
+    const COLUMNS_CALLBACK_SUFFIX  = 'Columns';
     
     private $active_menu;
     private $displayed = false;
@@ -311,6 +312,9 @@ class StandardMenu
      *
      * where the `screen_settings_callback()` will return the details to be displayed.
      *
+     * Similarly, a matching 'Columns' method is called, which should return an array
+     * containing of columns on a page, if any.
+     *
      */
     public function onMenuLoad()
     {
@@ -321,7 +325,12 @@ class StandardMenu
 
             // Set contextual help
             if (!empty($context_help))
-                add_contextual_help($current_screen, $context_help);       
+                add_contextual_help($current_screen, $context_help);
+                
+            // Manage page columns
+            $columns_callback = Helpers::validCallback($active_menu->_properties['callback'], static::COLUMNS_CALLBACK_SUFFIX);
+            if ($columns_callback)
+                add_filter('manage_' . $current_screen->id . '_columns', $columns_callback);
                 
             // Manage 'per page' screen settings
             $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
@@ -355,7 +364,6 @@ class StandardMenu
             
             // Test if there's a method to call before the actual callback
             $before_callback = Helpers::validCallback($active_menu->_properties['callback'], static::PRE_MENU_CALLBACK_SUFFIX);
-            
             if ($before_callback)
                 call_user_func($before_callback, $current_screen);
         }
