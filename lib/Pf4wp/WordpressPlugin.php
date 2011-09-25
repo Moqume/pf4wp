@@ -268,6 +268,16 @@ class WordpressPlugin
     {		
         return trailingslashit(dirname($this->plugin_file));
     }
+    
+    /**
+     * Returns the plugin Base Name (as used by many WordPress functions/methods
+     *
+     * @return string Plugin base name
+     */
+    public function getPluginBaseName()
+    {
+        return plugin_basename($this->plugin_file);
+    }
 
     /**
      * Get the plugin URL
@@ -295,6 +305,16 @@ class WordpressPlugin
             return $this->menu->getParentUrl();
         
         return false;
+    }
+    
+    /**
+     * Returns the display name for the plugin
+     *
+     * @return string Display name
+     */
+    public function getDisplayName()
+    {
+        return PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Name');
     }
     
     /**
