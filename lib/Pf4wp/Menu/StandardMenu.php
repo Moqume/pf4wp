@@ -327,12 +327,11 @@ class StandardMenu
             if (!empty($context_help))
                 add_contextual_help($current_screen, $context_help);
                 
-            // Manage page columns
+            // Manage 'columns' and 'per page' screen settings
             $columns_callback = Helpers::validCallback($active_menu->_properties['callback'], static::COLUMNS_CALLBACK_SUFFIX);
             if ($columns_callback)
                 add_filter('manage_' . $current_screen->id . '_columns', $columns_callback);
                 
-            // Manage 'per page' screen settings
             $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
             
             if (isset($_POST['screen-options-apply']) &&
@@ -349,6 +348,18 @@ class StandardMenu
                     $value = (int)$active_menu->per_page;
                 
                 update_user_option($current_user->ID, $per_page_id, $value);
+                
+                // Columns
+                $columns = apply_filters('manage_' . $current_screen->id . '_columns', array());
+                $to_hide = array();
+                
+                foreach ($columns as $column_id => $column_title) {
+                    if (!in_array($column_id, array('_title', 'cb', 'comment', 'media', 'name', 'title', 'username', 'blogname')) &&
+                        !isset($_POST[$column_id . '-hide']))
+                        $to_hide[] = $column_id;
+                }
+                
+                update_user_option($current_user->ID, 'manage' . $current_screen->id . 'columnshidden', $to_hide);
             }
             
             if ($active_menu->per_page) {
