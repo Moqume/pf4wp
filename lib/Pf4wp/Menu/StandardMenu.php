@@ -21,7 +21,6 @@ use Pf4wp\Common\Helpers;
 class StandardMenu
 {
     const PRE_MENU_CALLBACK_SUFFIX = 'Load';
-    const COLUMNS_CALLBACK_SUFFIX  = 'Columns';
     
     private $active_menu;
     private $displayed = false;
@@ -312,25 +311,22 @@ class StandardMenu
      *
      * where the `screen_settings_callback()` will return the details to be displayed.
      *
-     * Similarly, a matching 'Columns' method is called, which should return an array
-     * containing of columns on a page, if any.
-     *
      */
     public function onMenuLoad()
     {
         if (($active_menu = $this->getActiveMenu()) !== false) {
             $current_screen = get_current_screen();
             
+            // Test if there's a method to call before the actual callback
+            $before_callback = Helpers::validCallback($active_menu->_properties['callback'], static::PRE_MENU_CALLBACK_SUFFIX);
+            if ($before_callback)
+                call_user_func($before_callback, $current_screen);            
+            
             $context_help = $active_menu->context_help;
 
             // Set contextual help
             if (!empty($context_help))
                 add_contextual_help($current_screen, $context_help);
-                
-            // Manage 'columns' and 'per page' screen settings
-            $columns_callback = Helpers::validCallback($active_menu->_properties['callback'], static::COLUMNS_CALLBACK_SUFFIX);
-            if ($columns_callback)
-                add_filter('manage_' . $current_screen->id . '_columns', $columns_callback);
                 
             $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
             
@@ -350,8 +346,13 @@ class StandardMenu
                 update_user_option($current_user->ID, $per_page_id, $value);
                 
                 // Columns
-                $columns = apply_filters('manage_' . $current_screen->id . '_columns', array());
-                $to_hide = array();
+                $columns          = apply_filters('manage_' . $current_screen->id . '_columns', array());
+                $existing_to_hide = get_user_option('manage' . $current_screen->id . 'columnshidden');
+                if (!is_array($existing_to_hide))
+                    $existing_to_hide = array();
+                
+                // Any existing columns to hide, but not part of the current $columns, are placed in $to_hide.
+                $to_hide = array_diff($existing_to_hide, array_keys($columns));
                 
                 foreach ($columns as $column_id => $column_title) {
                     if (!in_array($column_id, array('_title', 'cb', 'comment', 'media', 'name', 'title', 'username', 'blogname')) &&
@@ -372,11 +373,6 @@ class StandardMenu
                     )
                 );
             }
-            
-            // Test if there's a method to call before the actual callback
-            $before_callback = Helpers::validCallback($active_menu->_properties['callback'], static::PRE_MENU_CALLBACK_SUFFIX);
-            if ($before_callback)
-                call_user_func($before_callback, $current_screen);
         }
     }
 }
