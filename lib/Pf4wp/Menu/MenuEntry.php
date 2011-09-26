@@ -118,6 +118,19 @@ class MenuEntry
     }
     
     /**
+     * Returns the (parent) slug of this menu.
+     *
+     * @return string
+     */
+    public function getSlug($parent = false)
+    {
+        if ($parent)
+            return $this->_properties['parent_slug'];
+            
+        return $this->_properties['slug'];
+    }
+    
+    /**
      * Checks if the current menu item has been displayed
      *
      * @return bool

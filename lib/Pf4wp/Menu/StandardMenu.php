@@ -92,7 +92,7 @@ class StandardMenu
      */
     public function getActiveMenu()
     {
-        if (!isset($this->active_menu)) {
+        if (empty($this->active_menu)) {
             $this->active_menu = false;
             
             foreach ($this->menus as $menu) {
