@@ -56,6 +56,13 @@ class CombinedMenu extends StandardMenu
             $this->active_menu = false;
             $active_submenu = (array_key_exists(self::SUBMENU_ID, $_GET)) ? trim((string)$_GET[self::SUBMENU_ID]) : '';
             
+            /* Check if the submenu actually exists, and if not, return the 
+             * parent as the active menu. But the cached value will NOT be
+             * set at this point.
+             */
+            if (!array_key_exists($active_submenu, $this->menus))
+                return $this->menus[$this->parent];
+            
             foreach ($this->menus as $menu) {
                 if ((empty($active_submenu) && $menu->isActive()) || $active_submenu == $menu->_properties['slug'])
                     $this->active_menu = $menu;

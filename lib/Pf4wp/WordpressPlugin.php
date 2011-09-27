@@ -724,7 +724,7 @@ class WordpressPlugin
     {
         if (!is_admin())
             return;
-        
+
         $queue = $this->internal_options->delayed_notices;
         
         if (!empty($queue)) {
