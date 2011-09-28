@@ -315,13 +315,13 @@ class StandardMenu
     public function onMenuLoad()
     {
         if (($active_menu = $this->getActiveMenu()) !== false) {
-            $current_screen = get_current_screen();
-            
             // Test if there's a method to call before the actual callback
             $before_callback = Helpers::validCallback($active_menu->_properties['callback'], static::PRE_MENU_CALLBACK_SUFFIX);
             if ($before_callback)
-                call_user_func($before_callback, $current_screen);            
-            
+                call_user_func($before_callback, get_current_screen());
+                
+            $current_screen = get_current_screen();
+                
             $context_help = $active_menu->context_help;
 
             // Set contextual help
