@@ -170,7 +170,7 @@ class MenuEntry
         
         // Sanitize and add count to the title here (prior operations use a "clean" title)
         if ($this->count !== false) {
-            $title = htmlspecialchars($title) . ' <span class="awaiting-mod"><span class="pending-count">' . $this->count . '</span>';
+            $title = htmlspecialchars($title) . ' <span class="awaiting-mod"><span class="pending-count">' . $this->count . '</span></span>';
         } else {
             $title = htmlspecialchars($title);
         }
