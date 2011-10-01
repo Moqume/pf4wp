@@ -617,15 +617,15 @@ class WordpressPlugin
         if ($result instanceof StandardMenu) {
             $this->menu = $result;
 
+            // Display menu (if not already displayed)
+            $this->menu->display();
+
             // Add additional hooks for menu entries
             $menus = $this->menu->getMenus();
             if ( is_array($menus) ) {
                 foreach ($menus as $menu_entry)
                     $this->attachAdminLoadHooks($menu_entry->getHook());
             }
-            
-            // Display menu (if not already displayed)
-            $this->menu->display();
         } else if (is_string($result)) {
             $this->attachAdminLoadHooks($result);
         }
@@ -703,7 +703,7 @@ class WordpressPlugin
     {
         if (!is_admin())
             return;
-            
+
         echo (
             '<script type="text/javascript">' . PHP_EOL .
             '//<![CDATA[' . PHP_EOL . 
