@@ -285,9 +285,10 @@ class MenuEntry
      */
     public function onMenuCallback()
     {
+        $current_screen = get_current_screen();
         $callback       = $this->_properties['callback'];
         $callback_args  = $this->_properties['callback_args'];
-        $per_page_id    = $this->_properties['slug'] . static::PER_PAGE_SUFFIX;
+        $per_page_id    = $this->_properties['slug'] . $current_screen->id . static::PER_PAGE_SUFFIX;
         $per_page_def   = $this->per_page;
         $capability     = $this->capability;
         
@@ -300,7 +301,7 @@ class MenuEntry
             if ( !empty($result) && $result instanceof MenuEntry ) {
                 $callback       = $result->_properties['callback'];
                 $callback_args  = $result->_properties['callback_args'];
-                $per_page_id    = $result->_properties['slug'] . static::PER_PAGE_SUFFIX;
+                $per_page_id    = $result->_properties['slug'] . $current_screen->id . static::PER_PAGE_SUFFIX;
                 $per_page_def   = $result->per_page;
                 $capability     = $result->capability;
             }

@@ -328,7 +328,7 @@ class StandardMenu
             if (!empty($context_help))
                 add_contextual_help($current_screen, $context_help);
                 
-            $per_page_id = $active_menu->_properties['slug'] . MenuEntry::PER_PAGE_SUFFIX;
+            $per_page_id = $active_menu->_properties['slug'] . $current_screen->id . MenuEntry::PER_PAGE_SUFFIX;
             
             if (isset($_POST['screen-options-apply']) &&
                 isset($_POST['wp_screen_options']['value']) &&
