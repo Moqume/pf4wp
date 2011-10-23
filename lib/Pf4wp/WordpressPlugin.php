@@ -63,6 +63,11 @@ class WordpressPlugin
     public $options;
     
     /**
+     * If the public-side AJAX is enabled, this variable is set to `true`
+     */
+    public $public_ajax = false;
+    
+    /**
      * The default options for the plugin, if any
      */
     protected $default_options = array();
@@ -243,7 +248,9 @@ class WordpressPlugin
         add_action('parse_request',	array($this, '_onPublicInit'), 10, 0);
         
         // AJAX events
-        add_action('wp_ajax_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
+        add_action('wp_ajax_' . $this->name, array($this, '_onAjaxCall'), 10, 0);       
+        if ($this->public_ajax)
+            add_action('wp_ajax_nopriv_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
         
         // Done!
         $this->registered = true;
@@ -345,7 +352,7 @@ class WordpressPlugin
      *		AJAX error response (uses $data as the error string)
      * @return die()
      */
-    public function ajaxResponse($data, $is_error = false) {       
+    public function ajaxResponse($data, $is_error = false) {
         $out = array();
         $out['stat']  = ($is_error) ? 'fail' : 'ok';
         $out['data']  = $data;
@@ -425,12 +432,32 @@ class WordpressPlugin
     /*---------- Private Helpers (callbacks have a public scope!) ----------*/
     
     /**
+     * Inserts (echoes) the AJAX cariables
+     */
+    private function insertAjaxVars()
+    {
+        echo (
+            '<script type="text/javascript">' . PHP_EOL .
+            '//<![CDATA[' . PHP_EOL . 
+            'var ' . strtr($this->name, '-', '_') . '_ajax = { ' .
+            'url: \'' . admin_url('admin-ajax.php') . '\', '.
+            'action: \'' . $this->name . '\', ' .
+            'nonce: \'' . wp_create_nonce($this->name . '-ajax-call') . '\', ' .
+            'nonceresponse: \'' . wp_create_nonce($this->name . '-ajax-response') . '\'' . 
+            ' }; ' . PHP_EOL .
+            '//]]>' . PHP_EOL .
+            '</script>' . PHP_EOL
+        );
+    }
+
+    /**
      * Attaches common Admin events to menu hooks
      * 
      * @see _onAdminRegister()
      * @param string Hook provided by WordPress for the menu item
      */    
-    private function attachAdminLoadHooks($hook) {
+    private function attachAdminLoadHooks($hook)
+    {
         if (empty($hook))
             return;
             
@@ -688,7 +715,7 @@ class WordpressPlugin
         
         // Set new exception handler
         set_exception_handler(array($this, '_onStage2Exception'));
-
+        
         $this->onAdminLoad(get_current_screen());
     }
         
@@ -704,15 +731,7 @@ class WordpressPlugin
         if (!is_admin())
             return;
 
-        echo (
-            '<script type="text/javascript">' . PHP_EOL .
-            '//<![CDATA[' . PHP_EOL . 
-            'var ajaxaction = \'' . $this->name . '\'; ' .
-            'var ajaxnonce = \'' . wp_create_nonce($this->name . '-ajax-call') . '\'; ' .
-            'var ajaxnonceresponse = \'' . wp_create_nonce($this->name . '-ajax-response') . '\';' . PHP_EOL .
-            '//]]>' . PHP_EOL .
-            '</script>' . PHP_EOL
-        );        
+        $this->insertAjaxVars();
         
         $this->onAdminScripts();
     }
@@ -768,11 +787,24 @@ class WordpressPlugin
         if (is_admin()) 
             return;
 
-        add_action('wp_print_scripts',  array($this, 'onPublicScripts'));
+        add_action('wp_print_scripts',  array($this, '_onPublicScripts'));
         add_action('wp_print_styles',   array($this, 'onPublicStyles'));
         add_action('wp_footer',         array($this, 'onPublicFooter'));
 
         $this->onPublicInit();
+    }
+    
+    /**
+     * Event called public scripts
+     *
+     * @see onPublicScripts()
+     */
+    final public function _onPublicScripts()
+    {
+        if ($this->public_ajax)
+            $this->insertAjaxVars();
+        
+        $this->onPublicScripts();
     }
     
     /**
@@ -915,7 +947,7 @@ class WordpressPlugin
     public function onAdminStyles() {}
     
     /**
-     * Handle an AJAX request
+     * Handle an Admin AJAX request
      *
      * This will process an AJAX call for this plugin. The 'ajaxResponse()' function
      * must be used to return any data, otherwise a 'No Event Response' error will be
@@ -957,7 +989,7 @@ class WordpressPlugin
      *
      * Wherein the plugin code, the onAjaxRequest() event is:
      * <code>
-     * function onAjaxRequest( $func, $data ) {
+     * function onAjaxAdminRequest( $func, $data ) {
      *  if ( $func == 'say' ) {
      *    $this->ajaxResponse($data);
      *  } else {
@@ -971,7 +1003,7 @@ class WordpressPlugin
      * @see ajaxResponse()
      */
     public function onAjaxRequest($action, $data) {}
-    
+
     /**
      * Event triggered when a public facing side of the plugin is ready for initialization
      */

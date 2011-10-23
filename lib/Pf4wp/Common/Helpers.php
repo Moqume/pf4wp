@@ -40,7 +40,14 @@ class Helpers
      */
     public static function makeSlug($string)
     {
-        return substr(base64_encode(md5($string)), 3, 6);
+        $nr = 'jEkNpiAsuZ';
+        $slug = substr(base64_encode(md5($string)), 3, 6);
+        
+        // Do not allow slugs to start with a number
+        if (is_numeric($slug[0]))
+            $slug = $nr[(int)$slug[0]] . $slug;
+            
+        return $slug;
     }
     
     /**
