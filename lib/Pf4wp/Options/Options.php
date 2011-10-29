@@ -101,7 +101,7 @@ abstract class Options
                 
                 // Ensure nested arrays are the same as the default
                 $result = $this->array_replace_nested($default, $result);
-            } else if ($result == null) {
+            } else if (is_null($result)) {
                 $result = $this->defaults[$option];
             }
         }
@@ -124,7 +124,7 @@ abstract class Options
     {
         $options = $this->get();
 
-        if ($value == null) {
+        if (is_null($value)) {
             unset($options[$option]);
         } else {
             $options[$option] = $value;

@@ -195,6 +195,7 @@ class Helpers
         // Check file validity
         if (!@file_exists($file) || ($data = @file_get_contents($file)) === false)
             return false;
+            
         
         // Obtan the MIME type and character encoding
         if (!$mime) {
