@@ -432,7 +432,17 @@ class WordpressPlugin
     /*---------- Private Helpers (callbacks have a public scope!) ----------*/
     
     /**
-     * Inserts (echoes) the AJAX cariables
+     * Inserts (echoes) the AJAX variables
+     *
+     * Exposes a number of variables to JavaScript, required for WP Ajax functions. This
+     * is done here, as they are not automatically generated for the non-priviledged (public)
+     * side by WP. The variables are:
+     *
+     * - `url`           : The URL where to send the AJAX request (location of admin-ajax.php)
+     * - `action`        : The action perform (the name of the plugin)
+     * - `nonce`         : The NONCE to send, used to verify the AJAX request by the plugin
+     * - `nonceresponse` : The NONCE sent back as a result of the AJAX request should match this to be valid
+     *
      */
     private function insertAjaxVars()
     {
@@ -950,7 +960,7 @@ class WordpressPlugin
      * Handle an Admin AJAX request
      *
      * This will process an AJAX call for this plugin. The 'ajaxResponse()' function
-     * must be used to return any data, otherwise a 'No Event Response' error will be
+     * *MUST* be used to return any data, otherwise a 'No Event Response' error will be
      * returned to the AJAX caller.
      *
      * It will verify the NONCE prior to triggering this event. If it fails this
@@ -958,43 +968,34 @@ class WordpressPlugin
      *
      * Example:
      * <code>
-     * $.ajax({
-     *   type : 'POST',
-     *   dataType : 'json',
-     *   url : ajaxurl,
-     *   timeout : 30000,
-     *   data : {
-     *     action: ajaxaction,
-     *     func: 'say',
-     *     data: 'Hello World',
-     *     _ajax_nonce: ajaxnonce
-     *    },
-     *    success : function(resp){
-     *      if (resp.nonce != ajaxnonceresponse) {
-     *        alert ('The Ajax response could not be validated');
-     *        return;
-     *     }
-     * 	
-     *     if (resp.stat == 'fail') {
-     *       alert ('There was an error: ' + resp.data);
-     *     } else {
-     *       alert (resp.data);
-     *     }
-     *   },
-     *   error : function(err){
-     *     alert ('There was an error obtaining the Ajax response');
-     *   }
-     * });
+     * function getAjax(ajaxFunc, ajaxData) {
+     *     var resp = false;
+     * 
+     *     $.ajax({
+     *         type     : 'POST',
+     *         dataType : 'json',
+     *         url      : my_plugin_name_ajax.url,
+     *         timeout  : 5000,
+     *         async    : false,
+     *         data     : { action: my_plugin_name_ajax.action, func: ajaxFunc, data: ajaxData, _ajax_nonce: my_plugin_name_ajax.nonce },
+     *         success  : function(ajaxResp) {
+     *             if (ajaxResp.nonce == my_plugin_name_ajax.nonceresponse && ajaxResp.stat == 'ok')
+     *                 resp = ajaxResp.data;
+     *         }
+     *     });
+     * 
+     *     return resp;
+     * }
      * </code>
      *
      * Wherein the plugin code, the onAjaxRequest() event is:
      * <code>
-     * function onAjaxAdminRequest( $func, $data ) {
-     *  if ( $func == 'say' ) {
-     *    $this->ajaxResponse($data);
-     *  } else {
-     *    $this->ajaxResponse('I don\'t know what to do!', true);
-     *  }
+     * function onAjaxRequest( $func, $data ) {
+     *    if ( $func == 'hello' ) {
+     *        $this->ajaxResponse('Hello World!');
+     *    } else {
+     *        $this->ajaxResponse('I don\'t know what to do!', true);
+     *    }
      * }
      * </code>
      *

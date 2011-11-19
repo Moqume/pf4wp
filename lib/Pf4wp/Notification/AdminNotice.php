@@ -30,11 +30,17 @@ class AdminNotice
      *
      * @param string $message Message to display to the end user
      * @param bool $is_error Optional parameter to indicate the message is an error message
+     * @param bool $raw Optional parameter that ignores $is_error and renders the $message as-is
      */
-    public static function add($message, $is_error = false)
+    public static function add($message, $is_error = false, $raw = false)
     {
         if (!is_admin())
             return;
+            
+        if ($raw) {
+            static::$notices[] = $message;
+            return;
+        }
 
         $class = ($is_error) ? 'error' : 'updated';
         
