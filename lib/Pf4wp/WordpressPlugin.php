@@ -37,6 +37,7 @@ use Pf4wp\Template\TwigEngine;
  */
 class WordpressPlugin
 {
+    const RESOURCES_DIR    = 'resources/';
     const LOCALIZATION_DIR = 'resources/l10n/';
     const VIEWS_DIR        = 'resources/views/';
     const VIEWS_CACHE_DIR  = 'store/cache/views/';
@@ -96,7 +97,7 @@ class WordpressPlugin
         if ( !empty($locale) ) {
             $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $locale . '.mo';
             
-            if ( @file_exists($mofile) && @is_readable($mofile) ) 
+            if ( @is_file($mofile) && @is_readable($mofile) ) 
                 load_textdomain($this->name, $mofile);
         }
 
@@ -285,7 +286,7 @@ class WordpressPlugin
     {
         return plugin_basename($this->plugin_file);
     }
-
+    
     /**
      * Get the plugin URL
      *
@@ -300,6 +301,22 @@ class WordpressPlugin
         // Default action
         return trailingslashit(WP_PLUGIN_URL . '/' . $this->name);
     }
+    
+    /**
+     * Helper to obtain the resource URL.
+     *
+     * @param string $type Type of resource directory to retrieve (ie: 'css', 'js', 'views'), 'js' by default
+     * @return array Array containing Base URL, Version and Debug string.
+     */
+    public function getResourceUrl($type = 'js')
+    {
+        $url     = trailingslashit($this->getPluginUrl() . static::RESOURCES_DIR . $type);
+        $version = PluginInfo::getInfo(true, $this->getPluginBaseName(), 'Version');
+        $debug   = (defined('WP_DEBUG') && WP_DEBUG) ? '.dev' : '';
+        
+        return array($url, $version, $debug);
+    }    
+    
     
     /**
      * Get the URL of the main menu entry

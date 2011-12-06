@@ -158,13 +158,13 @@ class StoragePath
         $index    = $path . 'index.htm';
 
          // Create a blank index, in case .htaccess is not supported
-        if (!@file_exists($index)) {
+        if (!@is_file($index)) {
             @touch($index);
             @chmod($index, self::FILE_CHMOD);
         }
         
         // Create a .htaccess
-        if (!@file_exists($htaccess)) {
+        if (!@is_file($htaccess)) {
             if ($fp = @fopen($htaccess, 'w')) {
                 @fwrite($fp, 'deny from all');
                 @fclose($fp);
@@ -205,7 +205,7 @@ class StoragePath
                 return false;
         }
         
-        if (@file_exists($path) && is_dir($path))
+        if (@is_dir($path))
             return @rmdir($path);
     }
 }
