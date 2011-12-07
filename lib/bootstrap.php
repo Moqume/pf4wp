@@ -36,7 +36,7 @@ global $wp_version;
 unset($_pf4wp_check_pass);
 unset($_pf4wp_ucl);
 
-/* Version Check - THIS PORTION MUST BE PHP4 COMPATIBLE.*/
+/* Version Check */
 
 // Default mininum PHP version
 if (!isset($_pf4wp_version_check_php))
