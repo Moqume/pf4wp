@@ -325,8 +325,18 @@ class StandardMenu
             $context_help = $active_menu->context_help;
 
             // Set contextual help
-            if (!empty($context_help))
-                add_contextual_help($current_screen, $context_help);
+            if (!empty($context_help)) {
+                if (is_object($current_screen) && is_callable(array($current_screen, 'add_help_tab'))) {
+                    // As of WP 3.3
+                    $current_screen->add_help_tab(array(
+                        'title'   => __('Overview'), 
+                        'id'      => 'overview', 
+                        'content' => $context_help,
+                    ));
+                } else {
+                    add_contextual_help($current_screen, $context_help);
+                }
+            }
                 
             $per_page_id = $active_menu->_properties['slug'] . $current_screen->id . MenuEntry::PER_PAGE_SUFFIX;
             
