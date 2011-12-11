@@ -74,25 +74,9 @@ class PostMetabox extends Metabox
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
             return;
             
-        // We first ensure it's actually something we know how to work with
-        if (!array_key_exists('post_type', $_POST) || empty($_POST['post_type']))
-            return;
-
-        // Set the type
-        $type = strtolower($_POST['post_type']);
-
         // Verify our own nonce, return if failed
         if (!isset($_POST[$this->name.'-nonce']) || !wp_verify_nonce($_POST[$this->name.'-nonce'], $this->name.'-metabox'))
             return;
-
-        // Verify permissions
-        
-        /* If it's a 'post' or 'page', we can verify it. Otherwise, it's 
-           a custom type and needs manual verification in onSavePost() */
-        if (in_array($type, array('page', 'post'))) {
-            if (!current_user_can('edit_'.$type)) // Meta check
-                return;
-        }
         
         /* Enforced by this class: ensure we don't try to work with revisions */
         if ($post_id = wp_is_post_revision($id))
