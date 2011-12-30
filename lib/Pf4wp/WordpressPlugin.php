@@ -32,7 +32,7 @@ use Pf4wp\Template\TwigEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 0.9.4
+ * @version 0.9.5
  * @package Pf4wp
  */
 class WordpressPlugin
