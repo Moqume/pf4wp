@@ -12,6 +12,9 @@ namespace Pf4wp\Pointers;
 /**
  * Static class providing a Feature Pointer (WP3.3+)
  *
+ * The basic requirements is to override the variables $selector and $content, optionally 
+ * $position and $capabilities. Then create the class during an onAdminScripts() callback.
+ *
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Pointers
@@ -19,19 +22,25 @@ namespace Pf4wp\Pointers;
 class FeaturePointer
 {
     /** The CSS Selector (ie., `#admin_toolbar`) where to show the pointer */
-    protected $selector     = '';
+    protected $selector = '';
     
     /** Array containing positioning ot the pointer */
-    protected $position     = array();
+    protected $position = array();
     
-    /** Array containing capabilities required to show the pointer */
-    protected $capabilities = null; // Array of capabilities required
+    /** Array containing capabilities required to show the pointer. Null if not required to check. */
+    protected $capabilities = null;
     
-    /** Array containing the contents to show inside the pointer */
-    protected $content      = '';
+    /** 
+     * String containing the contents to show inside the pointer 
+     *
+     * The string may contain a <h3> header, which will be used as a title.
+     * The remaining content should be Javascript safe.
+     */
+    protected $content  = '';
     
+    // Private
     private $name             = '';
-    private $default_position = array('edge' => 'top', 'align' => 'center');
+    private $default_position = array('edge' => 'top', 'align' => 'center'); // Default positions
     
 	/**
 	 * Enqueues the feature pointer
@@ -40,8 +49,8 @@ class FeaturePointer
 	 */
 	public function __construct()
     {
-        $class       = get_called_class();
-        $this->name  = strtolower(strtr($class, '\\', '_'));
+        // Internal name
+        $this->name = strtolower(strtr(get_called_class(), '\\', '_')); // Namespace will provide enough collision prevention
         
 		if (isset($this->capabilities)) {
 			foreach ($this->capabilities as $capability) {
@@ -92,7 +101,7 @@ class FeaturePointer
 				}
 			});
 
-			$('<?php echo $this->selector; ?>').pointer( options ).pointer('open');
+			$('<?php echo $this->selector; ?>').pointer(options).pointer('open');
 		});
 		//]]>
 		</script>
