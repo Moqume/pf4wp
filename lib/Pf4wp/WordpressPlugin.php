@@ -178,7 +178,7 @@ class WordpressPlugin
      * ));
      * $_pf4wp_ucl->register();
      * 
-     * My\Plugin::register(__FILE__); // <-- Register plugin with WordPress here
+     * call_user_func('My\\Plugin::register', __FILE__); // <-- Register plugin with WordPress here
      * </code>
      *
      * @param string $plugin_file The filename of the plugin's main file
