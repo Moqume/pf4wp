@@ -199,11 +199,15 @@ class Helpers
         
         // Obtan the MIME type and character encoding
         if (!$mime) {
-            $finfo = new \finfo(FILEINFO_MIME);
+            if (class_exists('\\finfo')) {
+                $finfo = new \finfo(FILEINFO_MIME);
+            } else {
+                $finfo = false; // 'Fileinfo' extension not available.
+            }
             
-            if ($finfo && ($mime = $finfo->file($file)) === false)
+            if (!$finfo || ($finfo && ($mime = $finfo->file($file)) === false))
                 $mime = @mime_content_type($file); /** Todo: to be replaced; currently falls back to a deprecated function */
-            
+
             if (empty($mime))
                 $mime = 'application/octet-stream'; // If we really can't figure it out, use a default per RFC 2046 (4.5.1) - not text/plain!
         }
