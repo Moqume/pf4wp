@@ -36,8 +36,7 @@ global $wp_version;
 unset($_pf4wp_check_pass);
 unset($_pf4wp_ucl);
 
-/* Version Check */
-
+/* Initialize some basic vars */
 // Default mininum PHP version
 if (!isset($_pf4wp_version_check_php))
     $_pf4wp_version_check_php = '5.3.0';
@@ -45,11 +44,23 @@ if (!isset($_pf4wp_version_check_php))
 // Default mininum WordPress version
 if (!isset($_pf4wp_version_check_wp))
     $_pf4wp_version_check_wp = '3.1.0';
+    
+$_pf4wp_plugin_name = '';
+
+if (is_admin() && function_exists('get_plugin_data')) {
+    $_pf4wp_plugin_data = get_plugin_data($_pf4wp_file);
+    
+    if (isset($_pf4wp_plugin_data['Name']))
+        $_pf4wp_plugin_name = '"' . $_pf4wp_plugin_data['Name'] . '"'; // Override with actual name
+        
+    unset($_pf4wp_plugin_data);
+}
+
+/* Version Check */
 
 if (($_pf4wp_old_php = version_compare(PHP_VERSION, $_pf4wp_version_check_php, '<')) || 
     version_compare($wp_version, $_pf4wp_version_check_wp, '<')) {
     if (is_admin()) {
-        $_pf4wp_plugin_name = '';
         $_pf4wp_deactivated = '';
         
         // Attempt to load some plugin helpers provided by WordPress
@@ -61,13 +72,7 @@ if (($_pf4wp_old_php = version_compare(PHP_VERSION, $_pf4wp_version_check_php, '
             deactivate_plugins($_pf4wp_file, true);
             $_pf4wp_deactivated = '<p>Because of this error, the plugin was automatically deactivated to prevent it from causing further problems with your WordPress site.</p>';
         }
-        
-        // Grab the name of the plugin, if possible
-        if (function_exists('get_plugin_data')) {
-            $_pf4wp_plugin_data = get_plugin_data($_pf4wp_file);
-            $_pf4wp_plugin_name = '"' . $_pf4wp_plugin_data['Name'] . '"';
-        }
-        
+
         // Gracefully "die", letting the end user know why this happened
         wp_die(
             sprintf(
@@ -87,26 +92,35 @@ if (($_pf4wp_old_php = version_compare(PHP_VERSION, $_pf4wp_version_check_php, '
 
 /* UCL */
 
-if (!class_exists('Symfony\Component\ClassLoader\UniversalClassLoader'))
-    require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/UniversalClassLoader.php';
+$_pf4wp_ucl_class = 'Symfony\\Component\\ClassLoader\\UniversalClassLoader';
+
+if (!class_exists($_pf4wp_ucl_class))
+    require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/UniversalClassLoader.php'; // Always include default UCL
 
 if (extension_loaded('apc')) {
     if (!defined('PF4WP_APC')) 
         define('PF4WP_APC', true);
         
-    if (!class_exists('Symfony\Component\ClassLoader\ApcUniversalClassLoader'))
+    $_pf4wp_ucl_class = 'Symfony\\Component\\ClassLoader\\ApcUniversalClassLoader';
+    
+    if (!class_exists($_pf4wp_ucl_class))
         require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/ApcUniversalClassLoader.php';
 
-    $_pf4wp_ucl = new Symfony\Component\ClassLoader\ApcUniversalClassLoader('pf4wp.' . md5($_pf4wp_file) . '.ucl.');
+    if (class_exists($_pf4wp_ucl_class))
+        $_pf4wp_ucl = new $_pf4wp_ucl_class('pf4wp.' . md5($_pf4wp_file) . '.ucl.');
 } else {
     if (!defined('PF4WP_APC'))
         define('PF4WP_APC', false);
-        
-    $_pf4wp_ucl = new Symfony\Component\ClassLoader\UniversalClassLoader();
+
+    if (class_exists($_pf4wp_ucl_class))    
+        $_pf4wp_ucl = new $_pf4wp_ucl_class();
 }
+
+if (!isset($_pf4wp_ucl) || $_pf4wp_ucl === false) return; // Only silently return if no UCL could be loaded.
 
 /* Cleanup */
 
+unset($_pf4wp_ucl_class);
 unset($_pf4wp_old_php);
 unset($_pf4wp_file);
 unset($_pf4wp_version_check_wp);
