@@ -91,16 +91,7 @@ class WordpressPlugin
         // Options handlers
         $this->options = new WordpressOptions($this->name, $this->default_options);
         $this->internal_options = new WordpressOptions('_' . $this->name, $this->default_internal_options); // Internal            
-            
-        // Load locales
-        $locale = get_locale();
-        if ( !empty($locale) ) {
-            $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $locale . '.mo';
-            
-            if ( @is_file($mofile) && @is_readable($mofile) ) 
-                load_textdomain($this->name, $mofile);
-        }
-
+        
         // pre-Initialize the template engine to a `null` engine
         $this->template = new NullEngine();        
         
@@ -208,6 +199,15 @@ class WordpressPlugin
     {
         if ($this->registered || empty($this->plugin_file))
             return;
+            
+        // Load locales
+        $locale = get_locale();
+        if ( !empty($locale) ) {
+            $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $locale . '.mo';
+            
+            if ( @is_file($mofile) && @is_readable($mofile) ) 
+                load_textdomain($this->name, $mofile);
+        }            
         
         // Plugin events (also in Multisite)
         add_action('after_plugin_row_' . plugin_basename($this->plugin_file), array($this, '_onAfterPluginText'), 10, 0);
