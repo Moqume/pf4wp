@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -18,7 +18,14 @@ namespace Pf4wp\Menu;
  */
 class SubHeadMenu extends CombinedMenu
 {
+    /** The type of menu entry type
+     * @internal
+     */
     protected $type = MenuEntry::MT_SETTINGS;
+    
+    /** Valid menu entry types for this menu
+     * @internal
+     */
     protected $supported_types = array(
         MenuEntry::MT_COMMENTS, MenuEntry::MT_DASHBOARD, MenuEntry::MT_LINKS, 
         MenuEntry::MT_TOOLS, MenuEntry::MT_MEDIA, MenuEntry::MT_SETTINGS, 
@@ -40,6 +47,7 @@ class SubHeadMenu extends CombinedMenu
      * @param bool $is_submenu Set to true if this is a submenu entry (False by default)
      * @return MenuEntry Reference to the menu entry
      * @throws \Exception if the specified menu is a submenu, without having added a main menu.
+     * @api
      */    
     public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {

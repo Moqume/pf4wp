@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -15,9 +15,13 @@ namespace Pf4wp\Options;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Options
+ * @api
  */
 class WordpressOptions extends Options
 {
+    /** Internal holder of options
+     * @internal
+     */
     protected $options = array();
     
     /**
@@ -25,6 +29,7 @@ class WordpressOptions extends Options
      *
      * @param string $name Name under which all options are stored
      * @param array $defaults Default options
+     * @api
      */
     public function __construct($name, array $defaults = array())
     {
@@ -38,6 +43,7 @@ class WordpressOptions extends Options
      * Invalidates the options
      *
      * Private function on a public scope, as it is also called on `switch_blog` action.
+     * @internal
      */
     public function _invalidateOptions()
     {
@@ -78,6 +84,7 @@ class WordpressOptions extends Options
      * Deletes all options
      *
      * @return bool Returns `true` of the options were deleted, `false` otherwise
+     * @api
      */
     public function delete()
     {

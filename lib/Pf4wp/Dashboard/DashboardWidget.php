@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -17,16 +17,28 @@ use Pf4wp\WordpressPlugin;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Dashboard
+ * @api
  */
 class DashboardWidget
 {
+    /** Stores the Dashboard widget name 
+      * @internal 
+      */
     protected $name = '';
+    
+    /** Stores whether the widget has been registered with WordPress 
+      * @internal 
+      */
     protected $registered = false;
+    
+    /** Back-reference to object owner 
+      * @internal
+      */
     protected $owner;
 
-    /**
-     * The title to display on the Dashboard Widget
-     */
+    /** The title to display on the Dashboard Widget
+      * @api
+      */
     protected $title = '';
        
     /**
@@ -34,6 +46,7 @@ class DashboardWidget
      *
      * @param WordpressPlugin $owner Owner of this dashboard widget
      * @param bool $auto_register Set to true if the widget can be registered immidiately during construct
+     * @api
      */
     public function __construct(WordpressPlugin $owner, $auto_register = true)
     {
@@ -51,6 +64,7 @@ class DashboardWidget
      * Returns working name for the dashboard widget
      * 
      * @return string Working name of dashboard widget
+     * @api
      */
     public function getName()
     {
@@ -59,6 +73,7 @@ class DashboardWidget
     
     /**
      * Registers the dashboard widget
+     * @api
      */
     public function register()
     {
@@ -72,6 +87,7 @@ class DashboardWidget
 
     /**
      * Event called when the plugin contents need to be rendered
+     * @api
      */
     public function onCallback() {}
 }

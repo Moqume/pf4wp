@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -15,19 +15,31 @@ namespace Pf4wp\Options;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Options
+ * @api
  */
 abstract class Options
 {
+    /** Name under which all options are stored
+     * @internal
+     */
     protected $name;
+    
+    /** Array containing default options
+     * @internal
+     */
     protected $defaults = array();
     
-    private $cache = array(); // Non-persistent working memory cache
+    /** Non-persistent working memory cache
+     * @internal
+     */
+    private $cache = array();
        
     /**
      * Constructor
      *
      * @param string $name Name under which all options are stored
      * @param array $defaults Default options
+     * @api
      */
     public function __construct($name, array $defaults = array())
     {
@@ -43,6 +55,7 @@ abstract class Options
      * Sets the defaults
      *
      * @param array $defaults Default options
+     * @api
      */
     public function setDefaults(array $defaults)
     {
@@ -57,6 +70,7 @@ abstract class Options
      * Private function on a public scope, as it is also called on `switch_blog` action.
      *
      * @param string $option Specific option to invalidate
+     * @internal
      */
     public function _invalidateCache($option = null)
     {
@@ -76,6 +90,7 @@ abstract class Options
      *
      * @param string $option Option to retrieve
      * @return mixed
+     * @api
      */
     public function __get($option)
     {
@@ -119,6 +134,7 @@ abstract class Options
      *
      * @param string $option Option to set
      * @param mixed $value Value to assign to the option
+     * @api
      */
     public function __set($option, $value)
     {
@@ -138,9 +154,9 @@ abstract class Options
     /**
      * Replaces nested arrays based on a default array.
      *
-     * @param array $default Array containing default array elements
-     * @param arrat $set Array containing elements that need to have at least the same
-     *   elements as the default array.
+     * @param array $defaults Array containing default array elements
+     * @param array $set Array containing elements that need to have at least the same elements as the default array.
+     * @internal
      */
     private function array_replace_nested(array $defaults, array $set)
     {
@@ -168,6 +184,7 @@ abstract class Options
      * Deletes all options
      *
      * @return bool Returns `true` of the options were deleted, `false` otherwise
+     * @api
      */
     public function delete()
     {

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -18,7 +18,34 @@ namespace Pf4wp\Template;
  */
 class NullEngine implements EngineInterface
 {
-    public function render($name, array $parameters = array()) {}
-
+    /**
+     * Renders a template
+     *
+     * Does nothing for this class
+     *
+     * @param string $name A template name
+     * @param array $parameters An array of parameters to pass to the template
+     * @return string The evaluated template as a string
+     * @throws \InvalidArgumentException if the template does not exist
+     * @throws \RuntimeException if the template cannot be rendered
+     * @api
+     */
+    public function render($name, array $parameters = array())
+    {
+        return false;
+    }
+    
+    /**
+     * Displays a template
+     *
+     * Does nothing for this class
+     *
+     * @param string $name A template name
+     * @param array $parameters An array of parameters to pass to the template
+     * @return string The evaluated template as a string
+     * @throws \InvalidArgumentException if the template does not exist
+     * @throws \RuntimeException if the template cannot be rendered
+     * @api
+     */
     public function display($name, array $parameters = array()) {}
 }

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -38,9 +38,19 @@ class MenuEntry
     
     const PER_PAGE_SUFFIX = '_per_page';
     
+    /** Hook returned by WordPress
+     * @internal
+     */
     private $hook = false;
+    
+    /** Set if the menu entry has been displayed
+     * @internal
+     */
     private $displayed = false;
 
+    /** The textdomain for translations
+     * @internal
+     */
     protected $textdomain = '';
     
     /** Internal properties, best not modified directly */
@@ -120,6 +130,7 @@ class MenuEntry
     /**
      * Returns the (parent) slug of this menu.
      *
+     * @param bool $parent Whether to return the slug of the parent menu entry, or this current menu entry (default)
      * @return string
      */
     public function getSlug($parent = false)

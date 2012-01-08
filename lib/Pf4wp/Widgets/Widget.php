@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -14,30 +14,51 @@ use Pf4wp\WordpressPlugin;
 /**
  * Provides a standard sidebar/theme Widget
  *
- * See wp-includes/widgets.php for \WP_Widget details
+ * Set the $title, and $description protected properties, which will be displayed 
+ * in the `Appearance->Widget` screen. Optionally set the $width protected property
+ * to adjust the minimum width of the Widget edit screen. The edit screen's contents
+ * are rendered with `onFormRender()` and related methods. Changes in this form are
+ * passed back to `onUpdate()`.
+ *
+ * On the public (visitor's) side, the Widget will render its contents with the
+ * on `onWidgetRender()` method.
+ *
+ * The Widget is initialized by the `WordpressPlugin\registerWidget()` method during
+ * the `WordpressPlugin\onWidgetRegister()` callback
+ *
+ * Also see wp-includes/widgets.php for \WP_Widget details
  *
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Widgets
+ * @see \Pf4wp\WordpressPlugin\registerWidget()
+ * @see \Pf4wp\WordpressPlugin\onWidgetRegister()
+ * @api
  */
 class Widget extends \WP_Widget
 {
+    /** Back-reference to owner object
+     * @internal
+     */
     protected $owner;
     
     /**
      * Title to provide the Widget on the Dashboard
      *
      * Note: this does not equal the title displayed in the theme, see TitledWidget
+     * @api
      */
     protected $title = '';
     
     /**
      * Description to display for the Widget on the Dashboard
+     * @api
      */
     protected $description = '';
     
     /**
      * Width of the widget form, if wider than 250 pixels
+     * @api
      */
     protected $width = 250;
     
@@ -53,9 +74,10 @@ class Widget extends \WP_Widget
     /**
      * Performs initialization of the widget
      *
-     * Called by WordpressPlugin::registerWidget()
+     * Called by WordpressPlugin\registerWidget()
      * 
      * @param WordpressPlugin $owner WordpressPlugin object of the widget owner
+     * @internal
      */
     public function doInit(WordpressPlugin $owner)
     {
@@ -68,8 +90,11 @@ class Widget extends \WP_Widget
     /**
      * Overrides the default widget() method
      *
+     * @param array $args Display arguments including before_title, after_title, before_widget, and after_widget.
+     * @param array $instance The settings for the particular instance of the widget
      * @see onBeforeWidgetRender()
      * @see onWidgetRender()
+     * @internal
      */
     function widget($args, $instance)
     {
@@ -85,8 +110,10 @@ class Widget extends \WP_Widget
     /**
      * Overrides the default form() method
      *
+     * @param array $instance Current settings
      * @see onBeforeFormRender()
      * @see onFormRender()
+     * @internal
      */
     function form($instance)
     {
@@ -100,7 +127,10 @@ class Widget extends \WP_Widget
     /**
      * Overrides the default update() method
      *
+     * @param array $new_instance New settings for this instance as input by the user via onRenderForm()
+     * @param array $old_instance Old settings for this instance
      * @see onUpdate()
+     * @internal
      */
     function update($new_instance, $old_instance)
     {
@@ -115,14 +145,19 @@ class Widget extends \WP_Widget
     /**
      * Internal event called before rendering Widget contents
      *
-     * @see onWidgetRender
+     * @param array $args Display arguments including before_title, after_title, before_widget, and after_widget.
+     * @param array $instance The settings for the particular instance of the widget
+     * @see onWidgetRender()
+     * @internal
      */
     protected function onBeforeWidgetRender($args, $instance) {}
     
     /**
      * Internal event called before rendered Form contents
      *
-     * @see onFormRender
+     * @param array $instance Current settings
+     * @see onFormRender()
+     * @internal
      */
     protected function onBeforeFormRender($instance) {}
     
@@ -136,6 +171,7 @@ class Widget extends \WP_Widget
      * @see widget()
      * @param array $args Display arguments including before_title, after_title, before_widget, and after_widget.
      * @param array $instance The settings for the particular instance of the widget
+     * @api
      */
     public function onWidgetRender($args, $instance) {}
     
@@ -144,6 +180,7 @@ class Widget extends \WP_Widget
      *
      * @see form()
      * @param array $instance Current settings
+     * @api
      */
     public function onFormRender($instance)
     {
@@ -157,6 +194,7 @@ class Widget extends \WP_Widget
      * @param array $new_instance New settings for this instance as input by the user via onRenderForm()
      * @param array $old_instance Old settings for this instance
      * @return array Settings to save or bool false to cancel saving
+     * @api
      */
     public function onUpdate($new_instance, $old_instance) {}
 }

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -17,19 +17,46 @@ use Pf4wp\Common\Helpers;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Menu
+ * @api
  */
 class StandardMenu
 {
     const PRE_MENU_CALLBACK_SUFFIX = 'Load';
     
+    /** Holds the active menu
+     * @internal
+     */
     private $active_menu;
+    
+    /** Set if the menu has been displayed (rendered)
+     * @internal
+     */
     private $displayed = false;
+    
+    /** The ID of the menu (used to determine the slug)
+     * @internal
+     */
     private $id = 'pf4wp';
     
-    protected $textdomain = ''; // For translations
-    protected $menus = array(); // Read only public
-    protected $parent = '';     // Parent menu
-    protected $capability = ''; // Default, determined by the type of menu. @see MenuEntry
+    /** Text domain used for translations
+     * @internal
+     */
+    protected $textdomain = '';
+    
+    /** Container for all menu entries
+     * @internal
+     */
+    protected $menus = array();
+    
+    /** Holds the parent menu
+     * @internal
+     */
+    protected $parent = '';
+    
+    /** Menu entry capability (role/permission)
+     * @internal
+     */
+    protected $capability = '';
     
     /**
      * The default type for the menu entries
@@ -46,6 +73,7 @@ class StandardMenu
      *
      * @param string $id A unique ID to avoiding menu slug collisions
      * @param string $textdomain The textdomain for translations
+     * @api
      */
     public function __construct($id = '', $textdomain = '')
     {
@@ -61,6 +89,7 @@ class StandardMenu
      * Note: This returns as soon as *any* of the menus have been displayed.
      *
      * @return bool `True` if the menu has been displayed, `false` otherwise
+     * @api
      */
     public function isDisplayed()
     {
@@ -78,6 +107,7 @@ class StandardMenu
      * Returns all menus from internal storage
      *
      * @return array An array of MenuEntry entries
+     * @api
      */
     public function getMenus()
     {
@@ -88,6 +118,7 @@ class StandardMenu
      * Returns the active menu entry
      *
      * @return MenuEntry|bool active menu item, `false` if invalid
+     * @api
      */
     public function getActiveMenu()
     {
@@ -109,6 +140,7 @@ class StandardMenu
      * Returns the slug of the parent menu entry
      * 
      * @return string
+     * @api
      */
     public function getParentSlug()
     {
@@ -119,6 +151,7 @@ class StandardMenu
      * Returns the hook of the parent menu entry
      *
      * @return string|bool WordPress provided hook, `false` if invalid.
+     * @api
      */
     public function getParentHook()
     {
@@ -132,6 +165,7 @@ class StandardMenu
      * Returns the URL of the parent menu entry
      *
      * @return string
+     * @api
      */
     public function getParentUrl()
     {
@@ -147,6 +181,7 @@ class StandardMenu
      * @see getType()
      * @param int $new_type The new type to set the menu entries to
      * @throws \Exception if the menu does not support the type requested, or has already been displayed
+     * @api
      */
     public function setType($new_type)
     {
@@ -171,6 +206,7 @@ class StandardMenu
      * @see \Myatu\WordPress\Plugin\Menu\MenuEntry
      * @see setType()
      * @return int Menu type
+     * @api
      */
     public function getType()
     {
@@ -188,6 +224,7 @@ class StandardMenu
      * @link http://codex.wordpress.org/Roles_and_Capabilities
      * @param string $new_capability Capability as defined by WordPress
      * @throws \Exception if the menu has already been displayed.
+     * @api
      */
     public function setCapability($new_capability)
     {
@@ -206,6 +243,7 @@ class StandardMenu
      *
      * @see setCapability()
      * @return string Capability as defined by WordPress
+     * @api
      */
     public function getCapability()
     {
@@ -226,6 +264,7 @@ class StandardMenu
      * @param bool $is_submenu Set to `true` if this is a submenu entry (`False` by default)
      * @return MenuEntry Reference to the menu entry
      * @throws \Exception if the specified menu is a submenu, without having added a main menu.
+     * @api
      */
     public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {
@@ -274,6 +313,7 @@ class StandardMenu
      * @param string|array $callback Callback function to call when the selected menu page needs to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optiona, none by default)
      * @return MenuEntry Reference to the menu entry
+     * @api
      */
     public function addSubMenu($title, $callback, $callback_args = false)
     {

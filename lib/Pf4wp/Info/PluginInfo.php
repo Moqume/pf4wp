@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -18,6 +18,9 @@ namespace Pf4wp\Info;
  */
 class PluginInfo
 {
+    /** Holds (caches) the current installed plugins
+     * @internal
+     */
     private static $installed_plugins;
     
     /**

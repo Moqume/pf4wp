@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -20,12 +20,24 @@ use Pf4wp\WordpressPlugin;
  */
 abstract class Metabox
 {
+    /** Name as registered with WordPress
+     * @internal
+     */
     protected $name = '';
+    
+    /** Back-reference to owner object
+     * @internal
+     */
     protected $owner;
+    
+    /** Set if the Metabox has been registered with WordPress
+     * @internal
+     */
     protected $registered = false;    
 
     /**
      * The title to display on the Dashboard Widget
+     * @api
      */
     protected $title = '';
     
@@ -33,6 +45,7 @@ abstract class Metabox
      * Array of page(s) on which to show this Metabox
      *
      * Possible pages: 'post', 'page', 'link', or a custom post type (see http://codex.wordpress.org/Post_Types)
+     * @api
      */
     protected $pages = array('post');
     
@@ -40,6 +53,7 @@ abstract class Metabox
      * The part of the page where this Metabox should be shown
      *
      * Possible parts: 'normal', 'advanced' or 'side'
+     * @api
      */
     protected $context = 'normal';
     
@@ -47,6 +61,7 @@ abstract class Metabox
      * The priority within the context where the Metabox should show
      *
      * Possible priorities: 'high', 'core', 'default' or 'low'
+     * @api
      */
     protected $priority = 'default';
        
@@ -55,6 +70,7 @@ abstract class Metabox
      *
      * @param WordpressPlugin $owner Owner of this Metabox
      * @param bool $auto_register Set to `true` if the meta-box can be registered immidiately during construction
+     * @api
      */
     public function __construct(WordpressPlugin $owner, $auto_register = true)
     {
@@ -72,6 +88,7 @@ abstract class Metabox
     
     /**
      * Registers the Metabox for the specified page(s)
+     * @api
      */
     public function register()
     {
@@ -91,6 +108,9 @@ abstract class Metabox
     
     /**
      * Internal event called when ready to render the Metabox contents. 
+     *
+     * @param object $data Object containing details of the post
+     * @internal
      */
     public function _onRender($data)
     {
@@ -109,6 +129,9 @@ abstract class Metabox
     
     /**
      * Internal event called when a post or link is saved.
+     *
+     * @param int $id The Post ID
+     * @internal
      */
     public function _onSave($id)
     {
@@ -117,6 +140,9 @@ abstract class Metabox
     
     /**
      * Internal event called when a post or link is deleted.
+     *
+     * @param int $id The post ID
+     * @internal
      */
     public function _onDelete($id)
     {
@@ -131,6 +157,7 @@ abstract class Metabox
      *
      * @param string $id ID of the post or link being edited
      * @param object $data Array object containing $_POST data, if any
+     * @api
      */
     public function onRender($id, $data) {}
     
@@ -142,6 +169,7 @@ abstract class Metabox
      * why this is subclassed for posts and links)!
      *
      * @param string $id ID of the post or link being saved
+     * @api
      */
     public function onSave($id) {}
     
@@ -153,6 +181,7 @@ abstract class Metabox
      * why this is subclassed for posts and links)!
      *
      * @param string $id ID of the post or link being deleted
+     * @api
      */
     public function onDelete($id) {}    
 }

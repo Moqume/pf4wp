@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -21,13 +21,19 @@ namespace Pf4wp\Pointers;
  */
 class FeaturePointer
 {
-    /** The CSS Selector (ie., `#admin_toolbar`) where to show the pointer */
+    /** The CSS Selector (ie., `#admin_toolbar`) where to show the pointer
+     * @api
+     */
     protected $selector = '';
     
-    /** Array containing positioning ot the pointer */
+    /** Array containing positioning ot the pointer
+     * @api
+     */
     protected $position = array();
     
-    /** Array containing capabilities required to show the pointer. Null if not required to check. */
+    /** Array containing capabilities required to show the pointer. Null if not required to check.
+     * @api
+     */
     protected $capabilities = null;
     
     /** 
@@ -35,17 +41,26 @@ class FeaturePointer
      *
      * The string may contain a <h3> header, which will be used as a title.
      * The remaining content should be Javascript safe.
+     * @api
      */
     protected $content  = '';
     
-    // Private
-    private $name             = '';
-    private $default_position = array('edge' => 'top', 'align' => 'center'); // Default positions
+    /** Internal name/ID used by WordPress and CSS
+     * @internal
+     */
+    private $name = '';
+    
+    /** Default positions
+     * @internal
+     */
+    private $default_position = array('edge' => 'top', 'align' => 'center');
     
 	/**
 	 * Enqueues the feature pointer
      *
-     * This class should be created during the onAdminScripts() callback
+     * This class should be created during the \Pf4wp\WordpressPlugin\onAdminScripts() callback
+     *
+     * @api
 	 */
 	public function __construct()
     {
@@ -74,6 +89,13 @@ class FeaturePointer
 		wp_enqueue_script('wp-pointer');
 	}
     
+    /**
+     * Prints (echoes) the script responsible for placing the pointer
+     *
+     * Note: Public scope due to callback
+     *
+     * @internal
+     */
     public function printPointer() {
         if (empty($this->content))
             return;

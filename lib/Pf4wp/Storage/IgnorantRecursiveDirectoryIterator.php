@@ -17,6 +17,9 @@ namespace Pf4wp\Storage;
  * @subpackage Storage
  */
 class IgnorantRecursiveDirectoryIterator extends \RecursiveDirectoryIterator {
+    /** Override of getChildren in \RecursiveDirectoryIterator, to skip directories with insufficient rights to access
+     * @internal
+     */
     function getChildren() {
         try {
             return parent::getChildren();

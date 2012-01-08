@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -15,6 +15,7 @@ namespace Pf4wp\Meta;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Meta
+ * @api
  */
 class PostMetabox extends Metabox
 {
@@ -43,6 +44,7 @@ class PostMetabox extends Metabox
      * @param string $field Field name for the meta object
      * @param mixed $data Data to associate with the meta object
      * @return bool Returns `true` if successful, `false` otherwise
+     * @api
      */
     public function setSinglePostMeta($id, $field, $data)
     {
@@ -67,6 +69,9 @@ class PostMetabox extends Metabox
     
     /**
      * Internal event called when a post is saved
+     *
+     * @param int $id ID of the post
+     * @internal
      */
     public function _onSave($id)
     {

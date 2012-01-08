@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -19,6 +19,7 @@ use Pf4wp\WordpressPlugin;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Storage
+ * @api
  */
 class StoragePath
 {
@@ -48,6 +49,7 @@ class StoragePath
     /**
      * Checks the specified path is empty or a root directory (ie., "C:\" or "/")
      *
+     * @param string $path The path to test against
      * @return bool Returns true if empty or a root directory, false otherwise
      */
     private static function isRoot($path)
@@ -67,6 +69,7 @@ class StoragePath
      * @param string $path Path to validate  
      * @param bool $is_private If set to true (default), the directory and sub-directories will be marked as private (Optional)
      * @return string|bool Returns the validated path if successful, `false` otherwise
+     * @api
      */    
     public static function validate($path, $is_private = true)
     {
@@ -138,6 +141,7 @@ class StoragePath
      *
      * @param string $path Path to the directory to mark as private
      * @param bool $recursive If `true`, also make the sub-directories private (Optional, default is `true`)
+     * @api
      */    
     public static function makePrivate($path, $recursive = true)
     {
@@ -181,6 +185,7 @@ class StoragePath
      * @param string $path Path to the directory to delete
      * @param bool $recursive If `true`, delete all sub-directories (Optional, default is `true`)
      * @return bool Returns `true` if the path could be deleted entirely, `false` otherwise (path has remnants)
+     * @api
      */
     public static function delete($path, $recursive = true)
     {

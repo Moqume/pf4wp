@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -15,18 +15,33 @@ namespace Pf4wp\Menu;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Menu
+ * @api
  */
 class CombinedMenu extends StandardMenu
 {
     const SUBMENU_ID = 'sub';
     
+    /** Holds the current active menu
+     * @internal
+     */
     private $active_menu;
+    
+    /** Holds the active parent menu slug
+     * @internal
+     */
     private $active_parent_slug;
   
+    /** The title of the "Home" menu entry (first menu entry displayed)
+     * @internal
+     */
     protected $home_title = '';
     
     /**
      * Constructor
+     *
+     * @param string $id A unique ID to avoiding menu slug collisions
+     * @param string $textdomain The textdomain for translations
+     * @api
      */
     public function __construct($id = '', $textdomain = '')
     {
@@ -39,6 +54,7 @@ class CombinedMenu extends StandardMenu
      * Sets the default home title for subheaders
      *
      * @param string $new_home_title The home title to use
+     * @api
      */
     public function setHomeTitle($new_home_title)
     {
@@ -49,6 +65,7 @@ class CombinedMenu extends StandardMenu
      * Returns the active menu entry
      *
      * @return MenuEntry|bool active menu item, `false` if invalid
+     * @api
      */
     public function getActiveMenu()
     {
@@ -79,6 +96,7 @@ class CombinedMenu extends StandardMenu
      * submenus and is used to display the right subheaders for the displayed (sub)menu.
      *
      * @return string|bool Slug for the active parent menu, `false` if invalid
+     * @api
      */
     public function getActiveParentSlug()
     {
@@ -108,6 +126,7 @@ class CombinedMenu extends StandardMenu
      * @param bool $is_submenu Set to true if this is a submenu entry (`False` by default)
      * @return MenuEntry Reference to the menu entry
      * @throws \Exception if the specified menu is a submenu, without having added a main menu.
+     * @api
      */
     public function addMenu($title, $callback, $callback_args = false, $is_submenu = false)
     {
@@ -130,6 +149,7 @@ class CombinedMenu extends StandardMenu
      * @param string|array $callback Callback function to call when the selected page needs to be rendered
      * @param array|bool $callback_args Optional additional arguments to pass to the callback (Optional, none by default)
      * @return MenuEntry Reference to the menu entry, `false` if invalid.
+     * @api
      */
     public function addSubHeader(MenuEntry $parent_menu, $title, $callback, $callback_args = false)
     {

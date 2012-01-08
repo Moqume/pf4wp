@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -18,6 +18,10 @@ namespace Pf4wp\Template\Extensions\Twig;
  */
 class Translate extends \Twig_Extension
 {
+    /**
+     * Reference to text domain used for translations (no need for a full back reference the owner)
+     * @internal
+     */
     private $textdomain;
     
     /**
