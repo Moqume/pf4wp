@@ -34,6 +34,7 @@ use Pf4wp\Template\TwigEngine;
  * @author Mike Green <myatus@gmail.com>
  * @version 0.9.5
  * @package Pf4wp
+ * @api
  */
 class WordpressPlugin
 {
@@ -174,6 +175,7 @@ class WordpressPlugin
      *
      * @param string $plugin_file The filename of the plugin's main file
      * @throws \Exception if no plugin filename was specified
+     * @api
      */
     public static function register($plugin_file)
     {
@@ -996,7 +998,7 @@ class WordpressPlugin
      *         async    : false,
      *         data     : { action: my_plugin_name_ajax.action, func: ajaxFunc, data: ajaxData, _ajax_nonce: my_plugin_name_ajax.nonce },
      *         success  : function(ajaxResp) {
-     *             if (ajaxResp.nonce == my_plugin_name_ajax.nonceresponse && ajaxResp.stat == 'ok')
+     *             if (ajaxResp.nonce == my_plugin_name_ajax.nonceresponse &amp;&amp; ajaxResp.stat == 'ok')
      *                 resp = ajaxResp.data;
      *         }
      *     });

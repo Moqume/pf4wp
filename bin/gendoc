@@ -8,13 +8,73 @@
  * file that was distributed with this source code.
  */
 
-$title = 'Plugin Framework for WordPress (Pf4wp)';
-$root_dir = dirname(__DIR__);
-$doc_dir = $root_dir . '/doc/html';
-$lib_dir = $root_dir . '/lib';
-$docblox = realpath($root_dir . '/../../../../../docblox/bin/docblox.php');
+/** Title for the documentation */
+$title       = 'Plugin Framework for WordPress (Pf4wp)';
 
-if (!@file_exists($docblox))
-    exit('Need Docblox to generate documentation');
+/** The default package */
+$default     = 'pf4wp';
+
+/** Docblox GIT location */
+$docblox_git = 'git://github.com/docblox/docblox.git';
+
+/**#@+
+ * @access private
+ */
+$root_dir    = dirname(__DIR__);
+$doc_dir     = $root_dir . '/doc/html';
+$lib_dir     = $root_dir . '/lib';
+$docblox_dir = __DIR__ . '/vendor/docblox';
+/**#@-*/
+
+function rrmdir($dir)
+{ 
+    if (is_dir($dir)) { 
+        $objects = scandir($dir); 
+        
+        foreach ($objects as $object) { 
+            if ($object != "." && $object != "..") { 
+                if (filetype($dir."/".$object) == "dir") {
+                    rrmdir($dir."/".$object); 
+                } else {
+                    unlink($dir."/".$object);
+                }
+            } 
+        } 
+        
+        reset($objects);
+        rmdir($dir); 
+    } 
+}
+
+
+/* Obtain DocBlox from GIT if possible */
+if (!@is_file($docblox_dir . '/bin/docblox.php')) {
+    $results = array();
     
-system(sprintf('php %s run -d %s -t %s --title %s', $docblox, escapeshellarg($lib_dir), escapeshellarg($doc_dir), escapeshellarg($title)));
+    echo "Retrieving DocBlox from $docblox_git... ";
+    exec(sprintf('git clone %s %s 2>&1 && cd %2$s && git submodule init 2>&1 && git submodule update 2>&1', escapeshellarg($docblox_git), escapeshellarg($docblox_dir), escapeshellarg(__DIR__)), $results, $return);
+    
+    if ($return !== 0) {
+        echo "ERROR!\r\n\r\n";
+        echo implode("\r\n", $results);
+        echo "\r\n\r\n";
+        exit(1);
+    }
+    
+    echo "Done!\r\n\r\n";
+}
+
+/* Double check we have the DocBlox executable */
+if (!@is_file($docblox_dir . '/bin/docblox.php')) {
+    echo "Need Docblox to generate documentation\r\n\r\n";
+    exit(1);
+}
+
+// Clean old docs
+rrmdir($doc_dir);
+
+// Generate doc
+system(sprintf('php %s/bin/docblox.php run -d %s -t %s -p --title %s --defaultpackagename %s', $docblox_dir, escapeshellarg($lib_dir), escapeshellarg($doc_dir), escapeshellarg($title), escapeshellarg($default)));
+
+// Done!
+echo "\r\n";
