@@ -15,6 +15,7 @@ namespace Pf4wp\Meta;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Meta
+ * @api
  */
 class LinkMetabox extends Metabox
 {
@@ -44,6 +45,9 @@ class LinkMetabox extends Metabox
        
     /**
      * Internal event called when a link is saved
+     *
+     * @param int $id ID of the post
+     * @internal
      */
     public function _onSave($id)
     {

@@ -27,17 +27,31 @@ use Pf4wp\WordpressPlugin;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Help
+ * @api
  */
 class ContextHelp
 {
+    /** Back reference to owner object
+     * @internal
+     */
     protected $owner;
+    
+    /** Name of the help context
+     * @internal
+     */
     protected $name = '';
+    
+    /** Structure holding the various help tabs
+     * @internal
+     */
     protected $help_sections = false;
     
     /**
      * Construct
      *
+     * @param WordpressPlugin $owner Owner object
      * @param string $name Name of the help context
+     * @api
      */
     public function __construct(WordpressPlugin $owner, $name)
     {
@@ -67,6 +81,7 @@ class ContextHelp
      * Adds all help tabs (WP 3.3+)
      *
      * @param object $screen Screen to add help tabs to
+     * @api
      */
     public function addTabs($screen)
     {

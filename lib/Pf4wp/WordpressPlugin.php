@@ -43,12 +43,39 @@ class WordpressPlugin
     const VIEWS_DIR        = 'resources/views/';
     const VIEWS_CACHE_DIR  = 'store/cache/views/';
     
-    private static $instances = array();            // Instance container
-    private $registered = false;                    // Whether the plugin has been registered with WordPress
-    private $plugin_file = '';                      // Main (master) filename of the plugin, as loaded by WordPress
-    private $name = '';                             // Working name of the plugin (used for options, slugs, etc.)
-    private $menu = false;                          // The menu attached to the plugin, if any
-    private $internal_options;                      // An object handling the internal options for the plugin
+    /** Instance container
+     * @internal
+     */
+    private static $instances = array();
+    
+    /** Whether the plugin has been registered with WordPress
+     * @internal
+     */
+    private $registered = false;
+    
+    /** Main (master) filename of the plugin, as loaded by WordPress
+     * @internal
+     */
+    private $plugin_file = '';
+    
+    /** Working name of the plugin (used for options, slugs, etc.)
+     * @internal
+     */
+    private $name = '';
+    
+    /** The menu attached to the plugin, if any
+     * @internal
+     */
+    private $menu = false;
+    
+    /** An object handling the internal options for the plugin
+     * @internal
+     */
+    private $internal_options;
+    
+    /** Array containing the default internal options
+     * @internal
+     */
     private $default_internal_options = array(
         'version' => '0.0',             // The version of the plugin, to track upgrade events
         'delayed_notices' => array(),   // Array containing notices that aren't displayed until possible to show them 
@@ -56,21 +83,28 @@ class WordpressPlugin
     
     /**
      * The template engine object (EngineInterface)
+     * @see Template\EngineInterface
+     * @api
      */
     public $template;
     
     /**
      * The options object for the plugin (Options)
+     * @see Options\Options
+     * @see Options\WordpressOptions
+     * @api
      */
     public $options;
     
     /**
      * If the public-side AJAX is enabled, this variable is set to `true`
+     * @api
      */
     public $public_ajax = false;
     
     /**
      * The default options for the plugin, if any
+     * @api
      */
     protected $default_options = array();
         
@@ -196,6 +230,7 @@ class WordpressPlugin
      * it's actually written to. Do not circumvent Zend's optimizations!
      *
      * @see construct()
+     * @api
      */
     public function registerActions()
     {
@@ -263,6 +298,7 @@ class WordpressPlugin
      * Returns the plugin working name (used to access low-level functions)
      *
      * @return string Plugin working name
+     * @api
      */
     public function getName()
     {
@@ -273,6 +309,7 @@ class WordpressPlugin
      * Returns the plugin directory
      *
      * @return string Plugin directory (always with trailing slash)
+     * @api
      */
     public function getPluginDir()
     {		
@@ -283,6 +320,7 @@ class WordpressPlugin
      * Returns the plugin Base Name (as used by many WordPress functions/methods
      *
      * @return string Plugin base name
+     * @api
      */
     public function getPluginBaseName()
     {
@@ -294,6 +332,7 @@ class WordpressPlugin
      *
      * @param bool $full If set to true, the full URL (including filename) is returned.
      * @return string Plugin URL
+     * @api
      */
     public function getPluginUrl($full = false)
     {		
@@ -309,6 +348,7 @@ class WordpressPlugin
      *
      * @param string $type Type of resource directory to retrieve (ie: 'css', 'js', 'views'), 'js' by default
      * @return array Array containing Base URL, Version and Debug string.
+     * @api
      */
     public function getResourceUrl($type = 'js')
     {
@@ -324,6 +364,7 @@ class WordpressPlugin
      * Get the URL of the main menu entry
      *
      * @return string|bool URL, or `false` if invalid.
+     * @api
      */
     public function getParentMenuUrl()
     {
@@ -337,6 +378,7 @@ class WordpressPlugin
      * Returns the display name for the plugin
      *
      * @return string Display name
+     * @api
      */
     public function getDisplayName()
     {
@@ -347,6 +389,7 @@ class WordpressPlugin
      * Retrieves the menu attached to this plugin
      *
      * @return StandardMenu|bool The menu or `false` if invalid
+     * @api
      */
     public function getMenu()
     {
@@ -370,6 +413,7 @@ class WordpressPlugin
      * @param bool $is_error Optional parameter that if set to `true` will create an 
      *		AJAX error response (uses $data as the error string)
      * @return die()
+     * @api
      */
     public function ajaxResponse($data, $is_error = false) {
         $out = array();
@@ -395,6 +439,7 @@ class WordpressPlugin
      *
      * @todo: find a suitable hook?
      * @param string Classname of class to register
+     * @api
      */
     public function registerWidget($class)
     {
@@ -427,6 +472,7 @@ class WordpressPlugin
      *
      * @param string $message Message to display to the end user
      * @param bool $is_error Optional parameter to indicate the message is an error message
+     * @api
      */
     public function addDelayedNotice($message, $is_error = false)
     {
@@ -442,6 +488,8 @@ class WordpressPlugin
     
     /**
      * Clears the delayed notice queue
+     *
+     * @api
      */
     public function clearDelayedNotices()
     {
@@ -462,6 +510,7 @@ class WordpressPlugin
      * - `nonce`         : The NONCE to send, used to verify the AJAX request by the plugin
      * - `nonceresponse` : The NONCE sent back as a result of the AJAX request should match this to be valid
      *
+     * @internal
      */
     private function insertAjaxVars()
     {
@@ -484,6 +533,7 @@ class WordpressPlugin
      * 
      * @see _onAdminRegister()
      * @param string Hook provided by WordPress for the menu item
+     * @internal
      */    
     private function attachAdminLoadHooks($hook)
     {
@@ -498,8 +548,9 @@ class WordpressPlugin
     /**
      * Iterates blogs, performing an action after each switch (multisite)
      *
-     * @param object $action Action to perform
+     * @param mixed $action Action to perform
      * @param mixed $args Array containing parameters to pass to the action
+     * @internal
      */
     private function iterateBlogsAction($action, array $args = array())
     {
@@ -539,6 +590,7 @@ class WordpressPlugin
      * Performs common _onActivation() actions
      *
      * @see _onActivation(), onActivation()
+     * @internal
      */
     public function _doOnActivation()
     {
@@ -562,6 +614,7 @@ class WordpressPlugin
      * Performs common _onDeactivation() actions
      *
      * @see _onDeactivation(), onDeactivation()
+     * @internal
      */
     public function _doOnDeactivation()
     {
@@ -576,6 +629,7 @@ class WordpressPlugin
      * Performs common _onUninstall() actions
      *
      * @see _onUninstal(), onUninstall()
+     * @internal
      */
     public function _doOnUninstall()
     {
@@ -601,6 +655,7 @@ class WordpressPlugin
      * 
      * @see _doOnActivation()
      * @param int $blog_id The new blog ID (provided by WP Action)
+     * @internal
      */
     final public function _onNewBlog($blog_id)
     {
@@ -621,6 +676,7 @@ class WordpressPlugin
      * Event called when the plugin is activated
      *
      * @see onActivation(), _doOnActivation()
+     * @internal
      */
     final public function _onActivation()
     {
@@ -631,6 +687,7 @@ class WordpressPlugin
      * Event called when the plugin is deactivated
      *
      * @see onDeactivation(), _doOnDeactivation()
+     * @internal
      */
     final public function _onDeactivation()
     {
@@ -643,6 +700,7 @@ class WordpressPlugin
      * Note: Remember to use the full namespace when calling this function!
      *
      * @see onUninstall(), _doOnUninstall()
+     * @internal
      */
     final public static function _onUninstall()
     {
@@ -658,6 +716,7 @@ class WordpressPlugin
      * returned by onBuildMenu(), if any.
      *
      * @see onAdminInit(), onBuildMenu()
+     * @internal
      */
     final public function _onAdminRegister()
     {
@@ -691,6 +750,7 @@ class WordpressPlugin
      * Displays a short message underneith the plugin description
      *
      * @see onAfterPluginText()
+     * @internal
      */
     final public function _onAfterPluginText()
     {
@@ -710,6 +770,7 @@ class WordpressPlugin
      * Adds a 'Settings' link to the plugin actions as an added convenience
      *
      * @param mixed Array containing existing plugin actions
+     * @internal
      */
     final public function _onPluginActionLinks($actions)
     {
@@ -736,6 +797,7 @@ class WordpressPlugin
      * Admin loader event called when the selected page is about to be rendered - Stage 2
      *
      * @see onAdminLoad()
+     * @internal
      */
     final public function _onAdminLoad()
     {
@@ -754,6 +816,7 @@ class WordpressPlugin
      * This provices AJAX nonce for calls and replies for improved security
      *
      * @see onAdminScripts()
+     * @internal
      */
     final public function _onAdminScripts()
     {
@@ -767,6 +830,8 @@ class WordpressPlugin
     
     /**
      * Event called to display Dashboard notices in the notification queue
+     *
+     * @internal
      */
     final public function _onAdminNotices()
     {
@@ -789,6 +854,7 @@ class WordpressPlugin
      * Process an AJAX call
      *
      * @see onAjaxRequest(), ajaxResponse()
+     * @internal
      */
     final public function _onAjaxCall()
     {
@@ -810,6 +876,7 @@ class WordpressPlugin
      * Registers public events
      *
      * @see onPublicScripts(), onPublicStyles(), onPublicLoad()
+     * @internal
      */
     final public function _onPublicInit()
     {
@@ -827,6 +894,7 @@ class WordpressPlugin
      * Event called public scripts
      *
      * @see onPublicScripts()
+     * @internal
      */
     final public function _onPublicScripts()
     {
@@ -841,6 +909,7 @@ class WordpressPlugin
      *
      * @param \Exception $exception Exception object
      * @param int $count Count of Exception object
+     * @internal
      */
     final public function _onStage2Exception($exception, $count = 1)
     {
@@ -895,16 +964,22 @@ class WordpressPlugin
     
     /**
      * Event called when the plugin is activated
+     *
+     * @api
      */
     public function onActivation() {}
     
     /**
      * Event called when the plugin is deactivated
+     *
+     * @api
      */
     public function onDeactivation() {}
     
     /**
      * Event called when the plugin is uninstalled
+     *
+     * @api
      */
     public function onUninstall() {}
     
@@ -915,16 +990,21 @@ class WordpressPlugin
      *
      * @param string $previous_version Previous version
      * @param string $current_version Current version
+     * @api
      */
     public function onUpgrade($previous_version, $current_version) {}
     
     /**
      * Event called when Dashboard Widgets are to be registered
+     *
+     * @api
      */
     public function onDashboardWidgetRegister() {}
     
     /**
      * Event called when Sidebard (Theme) Widgets are to be registered
+     *
+     * @api
      */
     public function onWidgetRegister() {}    
      
@@ -932,6 +1012,8 @@ class WordpressPlugin
      * Event called to build a custom menu
      * 
      * @return MenuEntry|string|bool Returns a MenuEntry, a string for a hook, or `false` if invalid
+     *
+     * @api
      */
     public function onBuildMenu()
     {
@@ -942,6 +1024,7 @@ class WordpressPlugin
      * Event called to retrieve the text to display after the plugin description, if any
      *
      * @return string String to display
+     * @api
      */
     public function onAfterPluginText()
     {
@@ -954,6 +1037,7 @@ class WordpressPlugin
      * This is a plugin-wide event. For page (screen) specific events, use onAdminLoad()
      *
      * @see onAdminLoad()
+     * @api
      */
     public function onAdminInit() {}
     
@@ -962,16 +1046,21 @@ class WordpressPlugin
      *
      * @param object|null The current screen being displayed
      * @see _onAdminLoad()
+     * @api
      */
     public function onAdminLoad($current_screen) {}
     
     /**
      * Event called when the plugin is ready to load scripts for the admin/Dashboard
+     *
+     * @api
      */
     public function onAdminScripts() {}
     
     /**
      * Event called when the plugin is ready to load stylesheets for the admin/Dashboard
+     *
+     * @api
      */
     public function onAdminStyles() {}
     
@@ -1021,28 +1110,36 @@ class WordpressPlugin
      * @param string $action Action to take according to AJAX caller
      * @param mixed $data Data sent by the AJAX caller (WARNING: Data is unsanitzed)
      * @see ajaxResponse()
+     * @api
      */
     public function onAjaxRequest($action, $data) {}
 
     /**
      * Event triggered when a public facing side of the plugin is ready for initialization
+     *
+     * @api
      */
     public function onPublicInit() {}
     
     /**
      * Event triggered when queueing scripts on the public facing side
+     *
+     * @api
      */
     public function onPublicScripts() {}
     
     /**
      * Event triggered when queueing stylesheets on the public facing side
+     *
+     * @api
      */
     public function onPublicStyles() {}
     
     /**
      * Event triggered when the footer is about to be displayed on the public facing side
+     *
+     * @api
      */
     public function onPublicFooter() {}    
 }
 
- 

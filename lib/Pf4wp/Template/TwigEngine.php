@@ -15,9 +15,13 @@ namespace Pf4wp\Template;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Template
+ * @api
  */
 class TwigEngine implements EngineInterface
 {
+    /** Reference to Twig_Environment object
+     * @internal
+     */
     protected $engine;
     
     /**
@@ -70,6 +74,7 @@ class TwigEngine implements EngineInterface
      * @return string The evaluated template as a string
      * @throws \InvalidArgumentException if the template does not exist
      * @throws \RuntimeException if the template cannot be rendered
+     * @api
      */
     public function render($name, array $parameters = array())
     {
@@ -86,6 +91,7 @@ class TwigEngine implements EngineInterface
      * @param array $parameters An array of parameters to pass to the template
      * @throws \InvalidArgumentException if the template does not exist
      * @throws \RuntimeException if the template cannot be rendered
+     * @api
      */
     public function display($name, array $parameters = array())
     {

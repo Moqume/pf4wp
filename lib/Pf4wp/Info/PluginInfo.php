@@ -18,6 +18,9 @@ namespace Pf4wp\Info;
  */
 class PluginInfo
 {
+    /** Holds (caches) the current installed plugins
+     * @internal
+     */
     private static $installed_plugins;
     
     /**

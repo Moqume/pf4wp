@@ -15,6 +15,7 @@ namespace Pf4wp\Dashboard;
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
  * @subpackage Dashboard
+ * @api
  */
 class ControlledDashboardWidget extends DashboardWidget
 {
@@ -38,6 +39,7 @@ class ControlledDashboardWidget extends DashboardWidget
     
     /**
      * Internal event called when plugin control content needs to be rendered and/or processed
+     * @internal
      */
     public function _onControlCallback()
     {
@@ -69,7 +71,10 @@ class ControlledDashboardWidget extends DashboardWidget
     /**
      * Event called when the plugin control contents need to be rendered and/or processed
      *
+     * Note that his handles BOTH rendering and processing
+     *
      * @param mixed|null $data Raw (unsanitized!) data to be processed, or null if no processing requested
+     * @api
      */
     public function onControlCallback($data) {}    
 }

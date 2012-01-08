@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (c) 2011 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -128,3 +128,7 @@ unset($_pf4wp_version_check_php);
 
 // Set the magic "pass" variable
 $_pf4wp_check_pass = true;
+
+// Set the version
+if (!defined('PF4WP_VERSION'))
+    define('PF4WP_VERSION', '1.0');

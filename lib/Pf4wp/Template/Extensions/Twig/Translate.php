@@ -18,6 +18,10 @@ namespace Pf4wp\Template\Extensions\Twig;
  */
 class Translate extends \Twig_Extension
 {
+    /**
+     * Reference to text domain used for translations (no need for a full back reference the owner)
+     * @internal
+     */
     private $textdomain;
     
     /**

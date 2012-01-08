@@ -18,6 +18,9 @@ namespace Pf4wp\Notification;
  */
 class AdminNotice
 {
+    /** Internal structure holding all notices
+     * @internal
+     */
     private static $notices = array();
     
     /**
@@ -31,6 +34,7 @@ class AdminNotice
      * @param string $message Message to display to the end user
      * @param bool $is_error Optional parameter to indicate the message is an error message
      * @param bool $raw Optional parameter that ignores $is_error and renders the $message as-is
+     * @api
      */
     public static function add($message, $is_error = false, $raw = false)
     {
@@ -49,6 +53,8 @@ class AdminNotice
     
     /**
      * Clears the notice queue
+     *
+     * @api
      */
     public static function clear()
     {
