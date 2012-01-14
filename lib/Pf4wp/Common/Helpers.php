@@ -167,6 +167,36 @@ class Helpers
     }
     
     /**
+     * Obtains the MIME type of a file
+     *
+     * @param string $file The file to obtain the MIME type of
+     * @param string $default_mime The default MIME in case it could not be determined (`application/octet-stream` as per RFC 2046 [4.5.1])
+     * @return string The MIME type
+     */
+    public static function getMime($file, $default_mime = 'application/octet-stream')
+    {
+        if (@is_dir($file))
+            return('httpd/unix-directory');
+        
+        // Try by *nix command
+        exec(sprintf('file -bi %s', escapeshellarg($file)), $mime, $exec_result);
+        
+        if ($exec_result == 0)
+            return $mime[0];
+        
+        if (class_exists('\\finfo')) {
+            try {
+                $finfo = new \finfo(FILEINFO_MIME);
+            
+                if ($finfo && ($mime = @$finfo->file($file)) !== false)
+                    return $mime;
+            } catch (\Exception $e) {}
+        }
+        
+        return $default_mime;
+    }
+    
+    /**
      * Embeds a file as a Data URI
      *
      * Example for HTML
@@ -188,36 +218,27 @@ class Helpers
     {
         $cache_id = 'pf4wp_' . md5($file) .  '_embed'; // 44 chars
         
-        // Get from APC cache
-        if (!$force && PF4WP_APC && ($result = apc_fetch($cache_id)) !== false)
+        // Get from cache
+        if (!$force && ($result = get_site_transient($cache_id)) !== false)
             return $result;            
         
-        // Check file validity
-        if (!@is_file($file) || ($data = @file_get_contents($file)) === false)
+        // Obtain file contents
+        if (@is_file($file) && ($fs = @filesize($file)) > 0 && ($fh = @fopen($file, 'rb')) !== false) {
+            $data = @fread($fh, $fs);
+            @fclose($fh);
+        } else {
             return false;
-            
-        
-        // Obtan the MIME type and character encoding
-        if (!$mime) {
-            if (class_exists('\\finfo')) {
-                $finfo = new \finfo(FILEINFO_MIME);
-            } else {
-                $finfo = false; // 'Fileinfo' extension not available.
-            }
-            
-            if (!$finfo || ($finfo && ($mime = $finfo->file($file)) === false))
-                $mime = @mime_content_type($file); /** Todo: to be replaced; currently falls back to a deprecated function */
-
-            if (empty($mime))
-                $mime = 'application/octet-stream'; // If we really can't figure it out, use a default per RFC 2046 (4.5.1) - not text/plain!
         }
+            
+        // Obtan the MIME type
+        if (!$mime)
+            $mime = static::getMime($file);
 
         // Whitespace characters, including newlines, and the default 'binary' charset are removed
         $result = sprintf('data:%s;base64,%s', str_replace('; charset=binary', '', $mime), preg_replace('#\s#', '', base64_encode($data))); 
         
-        // Save to APC cache (1 hr)
-        if (PF4WP_APC)
-            apc_store($cache_id, $result, 3600);
+        // Save to cache (1 hr)
+        set_site_transient($cache_id, $result, 3600);
         
         return $result;
     }
