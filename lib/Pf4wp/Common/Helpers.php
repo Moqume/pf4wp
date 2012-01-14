@@ -184,6 +184,7 @@ class Helpers
         if ($exec_result == 0)
             return trim($mime[0]);
         
+        // Try using fileinfo (finfo)
         if (class_exists('\\finfo')) {
             try {
                 $finfo = new \finfo(FILEINFO_MIME);
@@ -223,7 +224,7 @@ class Helpers
             return $result;            
         
         // Obtain file contents
-        if (@is_file($file) && ($fs = @filesize($file)) > 0 && ($fh = @fopen($file, 'rb')) !== false) {
+        if (@is_file($file) && @is_readable($file) && ($fs = @filesize($file)) > 0 && ($fh = @fopen($file, 'rb')) !== false) {
             $data = @fread($fh, $fs);
             @fclose($fh);
         } else {
