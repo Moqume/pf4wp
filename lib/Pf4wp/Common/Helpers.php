@@ -179,10 +179,10 @@ class Helpers
             return('httpd/unix-directory');
         
         // Try by *nix command
-        exec(sprintf('file -bi %s', escapeshellarg($file)), $mime, $exec_result);
+        @exec(sprintf('file -bi %s', escapeshellarg($file)), $mime, $exec_result);
         
         if ($exec_result == 0)
-            return $mime[0];
+            return trim($mime[0]);
         
         if (class_exists('\\finfo')) {
             try {
@@ -219,7 +219,7 @@ class Helpers
         $cache_id = 'pf4wp_' . md5($file) .  '_embed'; // 44 chars
         
         // Get from cache
-        if (!$force && ($result = get_site_transient($cache_id)) !== false)
+        if (!$force && ($result = get_transient($cache_id)) !== false)
             return $result;            
         
         // Obtain file contents
@@ -238,7 +238,7 @@ class Helpers
         $result = sprintf('data:%s;base64,%s', str_replace('; charset=binary', '', $mime), preg_replace('#\s#', '', base64_encode($data))); 
         
         // Save to cache (1 hr)
-        set_site_transient($cache_id, $result, 3600);
+        set_transient($cache_id, $result, 3600);
         
         return $result;
     }
