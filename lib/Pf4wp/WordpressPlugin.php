@@ -289,6 +289,9 @@ class WordpressPlugin
         add_action('wp_ajax_' . $this->name, array($this, '_onAjaxCall'), 10, 0);       
         if ($this->public_ajax)
             add_action('wp_ajax_nopriv_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
+            
+        // Register a final action when WP has been loaded
+        add_action('wp_loaded', array($this, '_onWpLoaded'), 10, 0);        
         
         // Done!
         $this->registered = true;
@@ -386,6 +389,17 @@ class WordpressPlugin
     }
     
     /**
+     * Returns the version for the plugin
+     *
+     * @return string Version
+     * @api
+     */
+    public function getVersion()
+    {
+        return PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
+    }
+    
+    /**
      * Retrieves the menu attached to this plugin
      *
      * @return StandardMenu|bool The menu or `false` if invalid
@@ -457,18 +471,40 @@ class WordpressPlugin
     
     /**
      * Clears (purges) any plugin-wide managed caches
+     *
+     * @param bool $delete If set to `true`, the cache is deleted instead of only cleared
+     * @return bool Returns `true` if the operation was successful, `false` otherwise
+     * @api
      */
-    public function clearCache()
+    public function clearCache($delete = false)
     {
-        StoragePath::delete($this->getPluginDir() . static::VIEWS_CACHE_DIR);
+        $cache_dir = $this->getPluginDir() . static::VIEWS_CACHE_DIR;
+        $result    = StoragePath::delete($cache_dir);
+        
+        if ($result && !$delete)
+            $result = StoragePath::validate($cache_dir);
+            
+        return $result;
+    }
+    
+    /**
+     * Deletes any plugin-wide managed caches
+     *
+     * Short-hand for clearCache(true)
+     *
+     * @return bool Returns `true` if the operation was successful, `false` otherwise
+     * @api
+     */
+    public function deleteCache()
+    {
+        return $this->clearCache(true);
     }
     
     /**
      * Adds a delayed notice to the queue
      *
-     * This is particularly useful for displaying notices after an onActivate() or
-     * onUpgrade() event, as these are triggered inside a sandbox thus preventing 
-     * anything from being displayed.
+     * This is particularly useful for displaying notices after an onActivate() event, 
+     * as this is triggered inside a sandbox thus preventing anything from being displayed.
      *
      * @param string $message Message to display to the end user
      * @param bool $is_error Optional parameter to indicate the message is an error message
@@ -594,18 +630,6 @@ class WordpressPlugin
      */
     public function _doOnActivation()
     {
-        // Clear the plugin-wide managed cache
-        $this->clearCache();
-        
-        // Check for upgrade
-        $current_version = PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
-       
-        if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
-            $this->internal_options->version = $current_version;
-            
-            $this->onUpgrade($previous_version, $current_version);
-        }
-        
         // Call user-defined event
         $this->onActivation();
     }
@@ -633,9 +657,6 @@ class WordpressPlugin
      */
     public function _doOnUninstall()
     {
-        // Clear the plugin-wide managed cache
-        $this->clearCache();
-
         // Delete our options from the WP database
         $this->options->delete();
         $this->internal_options->delete();
@@ -680,6 +701,9 @@ class WordpressPlugin
      */
     final public function _onActivation()
     {
+        // Clear the plugin-wide managed cache
+        $this->clearCache();
+        
         $this->iterateBlogsAction(array($this, '_doOnActivation'));
     }
     
@@ -706,7 +730,33 @@ class WordpressPlugin
     {
         $this_instance = self::instance('', false);
         
+        // Delete the plugin-wide managed cache
+        $this_instance->deleteCache();
+        
         $this_instance->iterateBlogsAction(array($this_instance, '_doOnUninstall'));
+    }
+    
+    /**
+     * Event called when the WordPress is fully loaded
+     *
+     * @see onWpLoaded(), onUpgrade()
+     * @internal
+     */
+    final public function _onWpLoaded()
+    {
+        // Check for upgrade
+        $current_version = $this->getVersion();
+       
+        if (!empty($current_version) && ($previous_version = $this->internal_options->version) != $current_version) {
+            // Clear (purge) the plugin-wide managed cache
+            $this->clearCache();
+            
+            $this->internal_options->version = $current_version;
+            
+            $this->iterateBlogsAction(array($this, 'onUpgrade'), array($previous_version, $current_version));
+        }
+        
+        $this->onWpLoaded();
     }
      
     /**
@@ -965,12 +1015,16 @@ class WordpressPlugin
     /**
      * Event called when the plugin is activated
      *
+     * Note: This event is called for each blog on a Multi-Site installation
+     *
      * @api
      */
     public function onActivation() {}
     
     /**
      * Event called when the plugin is deactivated
+     *
+     * Note: This event is called for each blog on a Multi-Site installation
      *
      * @api
      */
@@ -979,12 +1033,16 @@ class WordpressPlugin
     /**
      * Event called when the plugin is uninstalled
      *
+     * Note: This event is called for each blog on a Multi-Site installation
+     *
      * @api
      */
     public function onUninstall() {}
     
     /**
      * Event called when the plugin is upgraded
+     *
+     * Note: This event is called for each blog on a Multi-Site installation
      *
      * If the previous version is 0.0, then this is a new installation.
      *
@@ -993,6 +1051,16 @@ class WordpressPlugin
      * @api
      */
     public function onUpgrade($previous_version, $current_version) {}
+    
+    /**
+     * Event called when WordPress is fully loaded
+     *
+     * Note: This event is called on both the public (front-end) and admin (back-end) sides. Use 
+     * `is_admin()` if neccesary.
+     *
+     * @api
+     */
+    public function onWpLoaded() {}
     
     /**
      * Event called when Dashboard Widgets are to be registered
