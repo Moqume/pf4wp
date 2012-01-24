@@ -479,10 +479,10 @@ class WordpressPlugin
     public function clearCache($delete = false)
     {
         $cache_dir = $this->getPluginDir() . static::VIEWS_CACHE_DIR;
-        $result    = StoragePath::delete($cache_dir);
+        $result    = (StoragePath::delete($cache_dir) !== false);
         
         if ($result && !$delete)
-            $result = StoragePath::validate($cache_dir);
+            $result = (StoragePath::validate($cache_dir) !== false);
             
         return $result;
     }
