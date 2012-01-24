@@ -131,7 +131,61 @@ class StoragePath
             
         return false;
     }
+    
+    /**
+     * Recursively iterates through a path, calling a callback on each item (directory/file)
+     *
+     * This iterates through a path, calling the callback on each directory and/or file within.
+     * The callback includes any passed arguments, along with a SplFileInfo object as the last parameter.
+     *
+     * @param string $path Path to the directory to recurse
+     * @param mixed $callback Callback to perform
+     * @param array $args Optional arguments to send to the callback (empty by default, which only sends the current pathname to the callback)
+     * @param bool $on_dir If `true`, perform the callback if item is a directory (Optional, default is `true`)
+     * @param bool $on_file If `true`, perform the callback if item is a file (Optional, default is `false`)
+     * @api
+     */
+    public static function recurseCallback($path, $callback, $args = array(), $on_dir = true, $on_file = false)
+    {
+        if (!is_callable($callback) || (!$on_dir && !$on_file))
+            return;
+        
+        $iterator = new \RecursiveIteratorIterator(new IgnorantRecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+        
+        foreach ($iterator as $fileinfo) {
+            $cb_args   = $args;
+            $cb_args[] = $fileinfo;
+            
+            if ($fileinfo->isDir() && $on_dir) {
+                call_user_func_array($callback, $cb_args);
+            } else if ($fileinfo->isFile() && $on_file) {
+                call_user_func_array($callback, $cb_args);
+            }
+        }
+    }
+    
+    /**
+     * Obtains the full size of a path (including any sub-directories and files therein)
+     *
+     * @param string $path Path to the directory
+     * @return int Size, in bytes
+     * @api
+     */
+    public static function size($path)
+    {
+       $size = 0;
        
+        if (!@file_exists($path))
+            return $size;
+            
+        $iterator = new \RecursiveIteratorIterator(new IgnorantRecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+        
+        foreach ($iterator as $fileinfo) 
+            $size += $fileinfo->getSize();
+                
+        return $size;
+    }
+    
     /**
      * Recursively marks a directory private
      *
