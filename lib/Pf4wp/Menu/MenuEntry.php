@@ -55,6 +55,7 @@ class MenuEntry
     
     /** Internal properties, best not modified directly */
     public $_properties = array(
+        'long_slug'       => '',
         'slug'            => '',
         'parent_slug'     => '',
         'before_callback' => '',
@@ -175,7 +176,9 @@ class MenuEntry
         $slug       = $this->_properties['slug'];
         
         if ( empty($slug) ) {
-            $slug = Helpers::makeSlug($title);
+            $_cb  = $this->_properties['callback'];
+            $slug = Helpers::makeSlug(is_array($_cb) ? $_cb[1] : (string)$_cb); // Since 1.0.5, slug is based on callback function name
+            unset($_cb);
         }
         
         if ( empty($page_title) ) {

@@ -275,7 +275,10 @@ class StandardMenu
         
         $menu->_properties['callback']      = $callback;
         $menu->_properties['callback_args'] = $callback_args;
-        $menu->_properties['slug']          = Helpers::makeSlug($this->id.$menu->title);
+        
+        // Convert callback to a "slug" - since 1.0.5
+        $menu->_properties['long_slug'] = $this->id . '-' . (is_array($callback) ? $callback[1] : (string)$callback);
+        $menu->_properties['slug']      = Helpers::makeSlug($menu->_properties['long_slug']);
         
         // Ensure the slug is unique in our menu (up to 99).
         if (array_key_exists($menu->_properties['slug'], $this->menus)) {
