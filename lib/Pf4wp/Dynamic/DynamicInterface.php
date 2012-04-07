@@ -7,7 +7,7 @@
  * file that was distributed with this source code.
  */
 
-Namespace Pf4wp\Dynamic;
+namespace Pf4wp\Dynamic;
 
 /**
  * Dynamic class interface
