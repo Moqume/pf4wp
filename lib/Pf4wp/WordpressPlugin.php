@@ -32,7 +32,7 @@ use Pf4wp\Template\TwigEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 1.0.4
+ * @version 1.0.6
  * @package Pf4wp
  * @api
  */
@@ -550,18 +550,16 @@ class WordpressPlugin
      */
     private function insertAjaxVars()
     {
-        echo (
-            '<script type="text/javascript">' . PHP_EOL .
-            '//<![CDATA[' . PHP_EOL . 
-            'var ' . strtr($this->name, '-', '_') . '_ajax = { ' .
-            'url: \'' . admin_url('admin-ajax.php') . '\', '.
-            'action: \'' . $this->name . '\', ' .
-            'nonce: \'' . wp_create_nonce($this->name . '-ajax-call') . '\', ' .
-            'nonceresponse: \'' . wp_create_nonce($this->name . '-ajax-response') . '\'' . 
-            ' }; ' . PHP_EOL .
-            '//]]>' . PHP_EOL .
-            '</script>' . PHP_EOL
+        $vars = sprintf(
+            'var %s_ajax = {"url":"%s","action":"%s","nonce":"%s","nonceresponse":"%s"};',
+            strtr($this->name, '-', '_'),
+            admin_url('admin-ajax.php'),
+            $this->name,
+            wp_create_nonce($this->name . '-ajax-call'),
+            wp_create_nonce($this->name . '-ajax-response')
         );
+            
+        echo '<script type="text/javascript">' . PHP_EOL . '/* <![CDATA[ */' . PHP_EOL . $vars . PHP_EOL . '/* ]]> */' . PHP_EOL . '</script>' . PHP_EOL;
     }
 
     /**

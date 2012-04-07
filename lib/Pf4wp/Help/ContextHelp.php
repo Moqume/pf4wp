@@ -58,10 +58,22 @@ class ContextHelp
         $this->owner = $owner;
         $this->name  = $name;
         
-        $resource = $this->owner->getPluginDir() . \Pf4wp\WordpressPlugin::RESOURCES_DIR . 'help/' . $name . '.ini';
+        // Attempt to load a help file based on the locale first
+        $locale = get_locale();
+        if (!empty($locale)) {
+            $resource = $this->owner->getPluginDir() . \Pf4wp\WordpressPlugin::LOCALIZATION_DIR . 'help/' . $name . '.' . $locale . '.ini';
+            
+            if (@is_file($resource) && @is_readable($resource)) 
+                $this->help_sections = parse_ini_file($resource, true);
+        }  
         
-        if (@is_file($resource) && @is_readable($resource))
-            $this->help_sections = parse_ini_file($resource, true);
+        // Fall back to the default (untranslated) help file
+        if (!$this->help_sections) {
+            $resource = $this->owner->getPluginDir() . \Pf4wp\WordpressPlugin::RESOURCES_DIR . 'help/' . $name . '.ini';
+        
+            if (@is_file($resource) && @is_readable($resource))
+                $this->help_sections = parse_ini_file($resource, true);
+        }
     }
     
     /**
