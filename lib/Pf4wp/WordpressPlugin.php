@@ -291,7 +291,33 @@ class WordpressPlugin
             add_action('wp_ajax_nopriv_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
             
         // Register a final action when WP has been loaded
-        add_action('wp_loaded', array($this, '_onWpLoaded'), 10, 0);        
+        add_action('wp_loaded', array($this, '_onWpLoaded'), 10, 0);
+        
+        $this->onRegisterActions();
+        
+        // Check if there are any on-demand filters requested
+        $filters = array();
+        if (isset($_REQUEST['filter']))
+            $filters = explode(',', $_REQUEST['filter']);
+        
+        // And check the referer arguments as well if this is a POST request
+        if (!empty($_POST) && isset($_SERVER['HTTP_REFERER'])) {
+            $referer_args = explode('&', ltrim(strstr($_SERVER['HTTP_REFERER'], '?'), '?'));
+            foreach ($referer_args as $referer_arg)
+                if (!empty($referer_arg) && strpos($referer_arg, '=') !== false) {
+                    list($arg_name, $arg_value) = explode('=', $referer_arg);
+                    if ($arg_name == 'filter') {
+                        $filters = array_replace($filters, explode(',', $arg_value));
+                        break;
+                    }
+                }
+        }
+        
+        // Remove any possible duplicates from filters
+        $filters = array_unique($filters);
+        
+        // Fire filter events
+        foreach ($filters as $filter) $this->onFilter($filter);
         
         // Done!
         $this->registered = true;
@@ -1009,6 +1035,21 @@ class WordpressPlugin
     
     
     /*---------- Public events that are safe to override to provide full plugin functionality ----------*/
+    
+    /**
+     * Event called when the plugin is ready to register actions
+     *
+     * @api
+     */
+    public function onRegisterActions() {}
+    
+    /**
+     * Event called when a filter is requested during action registration
+     *
+     * @param string $filter Name of the filter
+     * @api
+     */
+    public function onFilter($filter) {}
     
     /**
      * Event called when the plugin is activated
