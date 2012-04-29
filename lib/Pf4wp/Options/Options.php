@@ -196,23 +196,103 @@ abstract class Options
     }
 
     /**
+     * Sanitizes a value (does not set!)
+     *
+     * The following sanitize options are accepted:
+     *
+     *  'regex'         Performs a regular expression match (set $sanitize_value)
+     *  'string'        Ensures the value is a string
+     *  'int'           Ensures the value is an integer
+     *  'bool'          Converts the value to a boolean
+     *  'in_array'      Checks if the value is within an array (set $sanitize_value)
+     *  'range'         Ensures the value is an integer within a range (set $sanitize_value)
+     *  callback        If the value is a callback, the callback will be performed and save the result
+     *
+     * @param mixed $value The value to sanitize
+     * @param mixed $sanitize_option The method for sanitizing
+     * @param mixed $sanitize_value Optional sanitize values to pass to the sanitize method
+     * @since 1.0.7
+     * @api
+     */
+    public function sanitizeValue($value, $sanitize_option, $sanitize_value = null)
+    {
+        $result = null;
+
+        switch ($sanitize_option) {
+            case 'regex' :
+                if (preg_match($sanitize_value, $value))
+                    $result = $value;
+                break;
+
+            case 'string' :
+                $result = (string)$value;
+                break;
+
+            case 'int' :
+                $result = (int)$value;
+                break;
+
+            case 'bool' :
+                if (strtolower($value) == 'true') {
+                    $result = true;
+                } else {
+                    $result = !empty($value);
+                }
+                break;
+
+            case 'in_array' :
+                if (!is_array($sanitize_value)) {
+                    if (is_string($sanitize_value)) {
+                        $sanitize_value = explode(',', $sanitize_value);
+                    } else {
+                        $sanitize_value = array($sanitize_value);
+                    }
+                }
+
+                $result = (in_array($value, $sanitize_value)) ? $value : null;
+                break;
+
+            case 'range' :
+                if (!is_array($sanitize_value)) {
+                    if (is_string($sanitize_value)) {
+                        $sanitize_value = explode(',', $sanitize_value);
+                    } else {
+                        $sanitize_value = array($sanitize_value);
+                    }
+                }
+
+                $count = count($sanitize_value);
+
+                if ($count > 1) {
+                    $min     = $sanitize_value[0];
+                    $max     = $sanitize_value[1];
+                    $default = ($count > 2) ? $sanitize_value[2] : null;
+                    $value   = (int)$value;
+
+                    if ($value >= $min && $value <= $max) {
+                        $result = $value;
+                    } else {
+                        $result = $default;
+                    }
+                }
+                break;
+
+            default :
+                if (is_callable($sanitize_name)) {
+                    $result = $sanitize_name($value);
+                }
+                break;
+        }
+
+        return $result;
+    }
+
+
+    /**
      * Loads the options from an array, applying a sanitize check before setting
      *
      * This can be used to save form-results or similar bulk actions. It automatically
      * filters out options that start with an underscore.
-     *
-     * Sanitizing the source occurs prior to setting the option. This is a simple array
-     * containing the option name as the key, followed by a string or array with sanitize
-     * details. The following sanitize options are accepted:
-     *
-     *  'regex'         Performs a regular expression match (set as array, with value containing regular expression)
-     *  'string'        Ensures the value is a string
-     *  'int'           Ensures the value is an integer
-     *  'bool'          Converts the value to a boolean
-     *  'in_array'      Checks if the value is within an array (set as array, with value containing array)
-     *  'range'         Ensures the value is an integer within a range (set as array, with value continaing an array with min, max and default [optional])
-     *  'ignore'        Ignores the value completely (does not set the option)
-     *  callback        If the value is a callback, the callback will be performed and save the result
      *
      * @param array $source An array with key/value pairs
      * @param array $sanitize An array containing details about sanitizing the source
@@ -236,8 +316,6 @@ abstract class Options
                     $this->__set($option, $value);
                 }
             } else {
-                $to_save        = null;
-                $ignore         = false;
                 $sanitize_value = null;
 
                 if (is_array($sanitize[$option])) {
@@ -247,84 +325,31 @@ abstract class Options
                     $sanitize_name = $sanitize[$option];
                 }
 
-                switch ($sanitize_name) {
-                    case 'regex' :
-                        if (preg_match($sanitize_value, $value))
-                            $to_save = $value;
-                        break;
+                // Unset the sanitize and source
+                unset($source[$option]);
+                unset($sanitize[$option]);
 
-                    case 'string' :
-                        $to_save = (string)$value;
-                        break;
-
-                    case 'int' :
-                        $to_save = (int)$value;
-                        break;
-
-                    case 'bool' :
-                        if (strtolower($value) == 'true') {
-                            $to_save = true;
-                        } else {
-                            $to_save = !empty($value);
-                        }
-                        break;
-
-                    case 'in_array' :
-                        if (!is_array($sanitize_value)) {
-                            if (is_string($sanitize_value)) {
-                                $sanitize_value = explode(',', $sanitize_value);
-                            } else {
-                                $sanitize_value = array($sanitize_value);
-                            }
-                        }
-
-                        $to_save = (in_array($value, $sanitize_value)) ? $value : null;
-                        break;
-
-                    case 'range' :
-                        if (!is_array($sanitize_value)) {
-                            if (is_string($sanitize_value)) {
-                                $sanitize_value = explode(',', $sanitize_value);
-                            } else {
-                                $sanitize_value = array($sanitize_value);
-                            }
-                        }
-
-                        $count = count($sanitize_value);
-
-                        if ($count > 1) {
-                            $min     = $sanitize_value[0];
-                            $max     = $sanitize_value[1];
-                            $default = ($count > 2) ? $sanitize_value[2] : null;
-                            $value   = (int)$value;
-
-                            if ($value >= $min && $value <= $max) {
-                                $to_save = $value;
-                            } else {
-                                $to_save = $default;
-                            }
-                        }
-                        break;
-
-                    case 'ignore' :
-                        $ignore = true;
-                        break;
-
-                    default :
-                        if (is_callable($sanitize_name)) {
-                            $to_save = $sanitize_name($value);
-                        } else {
-                            // We don't know what to do with it, see if we need to ignore it
-                            $ignore = $ignore_unsanitized;
-                        }
-                        break;
+                if ($sanitize_name !== 'ignore') {
+                    $this->__set($option, $this->sanitizeValue($value, $sanitize_name, $sanitize_value));
                 }
-
-                // Set the option, if not ignored
-                if (!$ignore)
-                    $this->__set($option, $to_save);
             } // isset sanitize option
         } // foreach
+
+        // If there's something left to sanitize, the source didn't have it at all
+        if (!empty($sanitize)) {
+            foreach ($sanitize as $option => $sanitize_name) {
+                $sanitize_value = null;
+
+                if (is_array($sanitize_name)) {
+                    $sanitize_name  = $sanitize_name[0];
+                    $sanitize_value = $sanitize_name[1];
+                }
+
+                if ($sanitize_name !== 'ignore') {
+                    $this->__set($option, $this->sanitizeValue(null, $sanitize_name, $sanitize_value));
+                }
+            }
+        }
     }
 
     /**
