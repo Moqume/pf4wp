@@ -23,17 +23,23 @@ abstract class Options
      * @internal
      */
     protected $name;
-    
+
     /** Array containing default options
      * @internal
      */
     protected $defaults = array();
-    
+
     /** Non-persistent working memory cache
      * @internal
      */
     private $cache = array();
-       
+
+    /** Non-persistent filter cache
+     * @internal
+     * @since 1.0.7
+     */
+    private $filter_cache = array();
+
     /**
      * Constructor
      *
@@ -44,13 +50,13 @@ abstract class Options
     public function __construct($name, array $defaults = array())
     {
         $this->name = $name;
-       
+
         $this->setDefaults($defaults);
-        
+
         // Ensure we're working with the right options on a multisite
         add_action('switch_blog', array($this, '_invalidateCache'), 10, 0);
     }
-        
+
     /**
      * Sets the defaults
      *
@@ -60,10 +66,10 @@ abstract class Options
     public function setDefaults(array $defaults)
     {
         $this->defaults = $defaults;
-        
+
         $this->_invalidateCache();
     }
-    
+
     /**
      * Invalidate the working memory cache
      *
@@ -75,17 +81,19 @@ abstract class Options
     public function _invalidateCache($option = null)
     {
         if (is_null($option)) {
-            $this->cache = array();
+            $this->cache        = array();
+            $this->filter_cache = array();
         } else {
             unset($this->cache[$option]);
+            unset($this->filter_cache[$option]);
         }
     }
-    
+
     /**
      * Get magic for options
      *
      * This will return the option merged with the default values, or `null`
-     * if the option does not exist and there is no default value (other than 
+     * if the option does not exist and there is no default value (other than
      * `null` itself).
      *
      * @param string $option Option to retrieve
@@ -97,11 +105,11 @@ abstract class Options
         // Return cached entry, if present
         if (isset($this->cache[$option]))
             return $this->cache[$option];
-            
+
         $options = $this->get();
-        
+
         $result = null; // Default
-        
+
         if (array_key_exists($option, $options))
             $result = $options[$option];
 
@@ -113,23 +121,23 @@ abstract class Options
                 } else if ((array)$result !== $result) {
                     $result = array($result);
                 }
-                
+
                 // Ensure nested arrays are the same as the default
                 $result = $this->array_replace_nested($default, $result);
             } else if (is_null($result)) {
                 $result = $this->defaults[$option];
             }
         }
-        
+
         // Store into cache
         $this->cache[$option] = $result;
 
         return $result;
     }
-    
+
     /**
      * Set magic for options
-     * 
+     *
      * Setting the value to `null` will delete the particular option
      *
      * @param string $option Option to set
@@ -145,12 +153,202 @@ abstract class Options
         } else {
             $options[$option] = $value;
         }
-        
+
         $this->_invalidateCache($option);
-        
+
         $this->set($options);
     }
-    
+
+    /**
+     * Returns the filtered results of one or more options using apply_filters()
+     *
+     * @param array|string $options The option(s) to filter
+     * @param string $filter_prefix The filter prefix (Optional)
+     * @return mixed Returns the filtered option(s)
+     * @api
+     * @since 1.0.7
+     */
+    public function filtered($options, $filter_prefix = '')
+    {
+        $result = array();
+        $single = false;
+
+        if (!is_array($options)) {
+            $single  = true;
+            $options = array($options);
+        }
+
+        foreach ($options as $option) {
+            if (!isset($this->filter_cache[$option])) {
+                // No filtered option stored in cache, so fetch first
+                $this->filter_cache[$option] = apply_filters($filter_prefix . $option, $this->__get($option));
+            }
+
+            if (!$single) {
+                $result[$option] = $this->filter_cache[$option];
+            } else {
+                $result = $this->filter_cache[$option];
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Loads the options from an array, applying a sanitize check before setting
+     *
+     * This can be used to save form-results or similar bulk actions. It automatically
+     * filters out options that start with an underscore.
+     *
+     * Sanitizing the source occurs prior to setting the option. This is a simple array
+     * containing the option name as the key, followed by a string or array with sanitize
+     * details. The following sanitize options are accepted:
+     *
+     *  'regex'         Performs a regular expression match (set as array, with value containing regular expression)
+     *  'string'        Ensures the value is a string
+     *  'int'           Ensures the value is an integer
+     *  'bool'          Converts the value to a boolean
+     *  'in_array'      Checks if the value is within an array (set as array, with value containing array)
+     *  'range'         Ensures the value is an integer within a range (set as array, with value continaing an array with min, max and default [optional])
+     *  'ignore'        Ignores the value completely (does not set the option)
+     *  callback        If the value is a callback, the callback will be performed and save the result
+     *
+     * @param array $source An array with key/value pairs
+     * @param array $sanitize An array containing details about sanitizing the source
+     * @param bool $ignore_unsanitized If there's an option without a corresponding sanitize, ignore the value completely
+     * @api
+     * @since 1.0.7
+     */
+    public function load($source, $sanitize = array(), $ignore_unsanitized = true)
+    {
+        if (!is_array($source))
+            return false;
+
+        foreach ($source as $option => $value) {
+            if (strpos($option, '_') === 0)
+                continue;
+
+            if (!isset($sanitize[$option])) {
+                // No sanitize option was given
+                if (!$ignore_unsanitized) {
+                    // We were asked not to ignore unsanitized options, so set it
+                    $this->__set($option, $value);
+                }
+            } else {
+                $to_save        = null;
+                $ignore         = false;
+                $sanitize_value = null;
+
+                if (is_array($sanitize[$option])) {
+                    $sanitize_name  = $sanitize[$option][0];
+                    $sanitize_value = $sanitize[$option][1];
+                } else {
+                    $sanitize_name = $sanitize[$option];
+                }
+
+                switch ($sanitize_name) {
+                    case 'regex' :
+                        if (preg_match($sanitize_value, $value))
+                            $to_save = $value;
+                        break;
+
+                    case 'string' :
+                        $to_save = (string)$value;
+                        break;
+
+                    case 'int' :
+                        $to_save = (int)$value;
+                        break;
+
+                    case 'bool' :
+                        if (strtolower($value) == 'true') {
+                            $to_save = true;
+                        } else {
+                            $to_save = !empty($value);
+                        }
+                        break;
+
+                    case 'in_array' :
+                        if (!is_array($sanitize_value)) {
+                            if (is_string($sanitize_value)) {
+                                $sanitize_value = explode(',', $sanitize_value);
+                            } else {
+                                $sanitize_value = array($sanitize_value);
+                            }
+                        }
+
+                        $to_save = (in_array($value, $sanitize_value)) ? $value : null;
+                        break;
+
+                    case 'range' :
+                        if (!is_array($sanitize_value)) {
+                            if (is_string($sanitize_value)) {
+                                $sanitize_value = explode(',', $sanitize_value);
+                            } else {
+                                $sanitize_value = array($sanitize_value);
+                            }
+                        }
+
+                        $count = count($sanitize_value);
+
+                        if ($count > 1) {
+                            $min     = $sanitize_value[0];
+                            $max     = $sanitize_value[1];
+                            $default = ($count > 2) ? $sanitize_value[2] : null;
+                            $value   = (int)$value;
+
+                            if ($value >= $min && $value <= $max) {
+                                $to_save = $value;
+                            } else {
+                                $to_save = $default;
+                            }
+                        }
+                        break;
+
+                    case 'ignore' :
+                        $ignore = true;
+                        break;
+
+                    default :
+                        if (is_callable($sanitize_name)) {
+                            $to_save = $sanitize_name($value);
+                        } else {
+                            // We don't know what to do with it, see if we need to ignore it
+                            $ignore = $ignore_unsanitized;
+                        }
+                        break;
+                }
+
+                // Set the option, if not ignored
+                if (!$ignore)
+                    $this->__set($option, $to_save);
+            } // isset sanitize option
+        } // foreach
+    }
+
+    /**
+     * Fetches multiple options as an array
+     *
+     * @param array $options Array containing the options to retrieve
+     * @return array Array containing key/value pairs
+     * @api
+     * @since 1.0.7
+     */
+    public function fetch($options)
+    {
+        $result = array();
+
+        if (!is_array($options))
+            return $result; // Nada!
+
+        foreach ($options as $option) {
+            $result[$option] = $this->__get($option);
+        }
+
+        return $result;
+    }
+
     /**
      * Replaces nested arrays based on a default array.
      *
@@ -162,11 +360,11 @@ abstract class Options
     {
         // Initially match up defaults with set
         $result = array_replace($defaults, $set);
-        
+
         // Iterate over defaults, to see if there are any nested arrays
         foreach ($defaults as $default_key => $default_value) {
             // Note: typecast checking is faster than using is_
-            if ((array)$default_value === $default_value) { 
+            if ((array)$default_value === $default_value) {
                 if ((int)$default_key === $default_key) {
                     // If indexed (multiple entries), ensure each entry has the same default values
                     foreach ($result as $result_key => $result_value)
@@ -176,10 +374,10 @@ abstract class Options
                 }
             }
         }
-        
+
         return $result;
     }
-    
+
     /**
      * Deletes all options
      *
@@ -190,17 +388,17 @@ abstract class Options
     {
         // Invalidate cache
         $this->_invalidateCache();
-        
+
         return true;
-    }    
-    
+    }
+
     /**
      * Obtains options
      *
      * @return array Array containing options
      */
     protected abstract function get();
-       
+
     /**
      * Saves options
      *
