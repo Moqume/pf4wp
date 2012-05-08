@@ -23,7 +23,7 @@ class TwigEngine implements EngineInterface
      * @internal
      */
     protected $engine;
-    
+
     /**
      * Constructor
      *
@@ -34,11 +34,17 @@ class TwigEngine implements EngineInterface
     {
         if (class_exists('\Twig_Autoloader')) {
             \Twig_Autoloader::register();
-           
+
             $this->engine = new \Twig_Environment(new \Twig_Loader_Filesystem($template_path), $options);
+
+            // Add Twig extension escaper
+            if (class_exists('\Twig_Extension_Escaper')) {
+                $escaper = new \Twig_Extension_Escaper(true);
+                $this->engine->addExtension($escaper);
+            }
         }
     }
-    
+
     /**
      * Returns the actual Twig engine instance
      */
@@ -46,7 +52,7 @@ class TwigEngine implements EngineInterface
     {
         return $this->engine;
     }
-    
+
     /**
      * Loads the given template
      *
@@ -64,8 +70,8 @@ class TwigEngine implements EngineInterface
         } catch (\Twig_Error_Loader $e) {
             throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
         }
-    }    
-    
+    }
+
     /**
      * Renders a template
      *
@@ -80,10 +86,10 @@ class TwigEngine implements EngineInterface
     {
         if (!isset($this->engine))
             return '';
-            
+
         return $this->load($name)->render($parameters);
     }
-    
+
     /**
      * Displays a template
      *
@@ -97,7 +103,7 @@ class TwigEngine implements EngineInterface
     {
         if (!isset($this->engine))
             return;
-            
+
         $this->load($name)->display($parameters);
     }
 }
