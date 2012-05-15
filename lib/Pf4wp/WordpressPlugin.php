@@ -32,7 +32,7 @@ use Pf4wp\Template\TwigEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 1.0.6.1
+ * @version 1.0.9
  * @package Pf4wp
  * @api
  */
@@ -87,6 +87,13 @@ class WordpressPlugin
      * @api
      */
     public $template;
+
+    /**
+     * The options to pass to the template engine object upon creation
+     * @since 1.0.9
+     * @api
+     */
+    protected $template_options = array();
 
     /**
      * The options object for the plugin (Options)
@@ -289,13 +296,21 @@ class WordpressPlugin
         $views_dir = $this->getPluginDir() . static::VIEWS_DIR;
 
         if (@is_dir($views_dir) && @is_readable($views_dir)) {
-            $options = array();
+            $options = array(
+                'charset'           => 'utf-8',
+                'strict_variables'  => false,
+                'autoescape'        => 'html',
+                'optimizations'     => 1,
+            );
 
             if (defined('WP_DEBUG') && WP_DEBUG)
-                $options = array_merge($options, array('debug' => true));
+                $options['debug'] = true;
 
             if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
-                $options = array_merge($options, array('cache' => $cache));
+                $options['cache'] = $cache;
+
+            // Merge these options with those specified by the plugin developer, if any
+            $options = array_merge($options, $this->template_options);
 
             $this->template = new TwigEngine($views_dir, $options);
 

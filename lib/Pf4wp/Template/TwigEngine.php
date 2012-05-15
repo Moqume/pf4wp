@@ -36,12 +36,6 @@ class TwigEngine implements EngineInterface
             \Twig_Autoloader::register();
 
             $this->engine = new \Twig_Environment(new \Twig_Loader_Filesystem($template_path), $options);
-
-            // Add Twig extension escaper
-            if (class_exists('\Twig_Extension_Escaper')) {
-                $escaper = new \Twig_Extension_Escaper(true);
-                $this->engine->addExtension($escaper);
-            }
         }
     }
 
