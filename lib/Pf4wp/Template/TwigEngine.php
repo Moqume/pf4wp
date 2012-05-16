@@ -25,17 +25,32 @@ class TwigEngine implements EngineInterface
     protected $engine;
 
     /**
+     * Options passed during construct
+     * @internal
+     */
+    protected $options;
+
+    /**
      * Constructor
      *
      * @param string $template_path Path containing the templates
      * @param mixed $options Options to pass to the template engine
      */
-    public function __construct($template_path, $options)
+    public function __construct($template_path, array $options)
     {
         if (class_exists('\Twig_Autoloader')) {
             \Twig_Autoloader::register();
 
-            $this->engine = new \Twig_Environment(new \Twig_Loader_Filesystem($template_path), $options);
+            $this->options = $options;
+            $this->engine  = new \Twig_Environment(new \Twig_Loader_Filesystem($template_path), $this->options);
+
+            // Add Twig translation extension automatically
+            $translate_extension = new \Pf4wp\Template\Extensions\Twig\Translate();
+
+            if (isset($this->options['_textdomain']))
+                $translate_extension->setTextDomain($this->options['_textdomain']);
+
+            $this->engine->addExtension($translate_extension);
         }
     }
 

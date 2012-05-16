@@ -18,7 +18,6 @@ use Pf4wp\Menu\StandardMenu;
 use Pf4wp\Menu\MenuEntry;
 use Pf4wp\Widgets\Widget;
 use Pf4wp\Template\NullEngine;
-use Pf4wp\Template\TwigEngine;
 
 /**
  * WordpressPlugin (Pf4wp) provides a base framework to develop plugins for WordPress.
@@ -87,6 +86,12 @@ class WordpressPlugin
      * @api
      */
     public $template;
+
+    /**
+     * The template engine to use
+     * @api
+     */
+    protected $template_engine = 'Pf4wp\Template\TwigEngine';
 
     /**
      * The options to pass to the template engine object upon creation
@@ -292,16 +297,18 @@ class WordpressPlugin
             return;
         }
 
-        // Template Engine (currently Twig)
-        $views_dir = $this->getPluginDir() . static::VIEWS_DIR;
+        // Template Engine initialization
+        $views_dir       = $this->getPluginDir() . static::VIEWS_DIR;
+        $template_engine = false;
 
-        if (@is_dir($views_dir) && @is_readable($views_dir)) {
-            $options = array(
-                'charset'           => 'utf-8',
-                'strict_variables'  => false,
-                'autoescape'        => 'html',
-                'optimizations'     => 1,
-            );
+        if (class_exists($this->template_engine)) {
+            $rc = new \ ReflectionClass($this->template_engine);
+            if ($rc->implementsInterface('Pf4wp\Template\EngineInterface'))
+                $template_engine = $this->template_engine;
+        }
+
+        if ($template_engine && @is_dir($views_dir) && @is_readable($views_dir)) {
+            $options = array('_textdomain' => $this->name);
 
             if (defined('WP_DEBUG') && WP_DEBUG)
                 $options['debug'] = true;
@@ -309,16 +316,10 @@ class WordpressPlugin
             if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
                 $options['cache'] = $cache;
 
-            // Merge these options with those specified by the plugin developer, if any
-            $options = array_merge($options, $this->template_options);
+            // Replace these options with those specified by the plugin developer, if any
+            $options = array_replace($options, $this->template_options);
 
-            $this->template = new TwigEngine($views_dir, $options);
-
-            // Add Twig translation extension automatically
-            $translate_extension = new \Pf4wp\Template\Extensions\Twig\Translate();
-            $translate_extension->setTextDomain($this->name);
-
-            $this->template->getEngine()->addExtension($translate_extension);
+            $this->template = new $template_engine($views_dir, $options);
         }
 
         // Internal and Admin events
