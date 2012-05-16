@@ -618,6 +618,51 @@ class WordpressPlugin
         $this->internal_options->delayed_notices = array();
     }
 
+    /**
+     * Provides debug information for displaying
+     *
+     * The information is in the array as "Display Name" => "Display Value"
+     *
+     * @since 1.0.10
+     * @api
+     */
+    public function getDebugInfo()
+    {
+        global $wp_version, $wpdb;
+
+        $active_plugins = array();
+        $mem_peak       = (function_exists('memory_get_peak_usage')) ? memory_get_peak_usage() / 1048576 : 0;
+        $mem_usage      = (function_exists('memory_get_usage')) ? memory_get_usage() / 1048576 : 0;
+        $mem_max        = (int) @ini_get('memory_limit');
+        $current_theme  = (function_exists('wp_get_theme')) ? wp_get_theme() : get_current_theme(); // WP 3.4
+
+        foreach (\Pf4wp\Info\PluginInfo::getInfo(true) as $plugin)
+            $active_plugins[] = sprintf("'%s' by %s", $plugin['Name'], $plugin['Author']);
+
+        $result = array(
+            'Generated On'              => gmdate('D, d M Y H:i:s') . ' GMT',
+            $this->getDisplayName() . ' Version' => $this->getVersion(),
+            'PHP Version'               => PHP_VERSION,
+            'Memory Usage'              => sprintf('%.2f MB Peak, %.2f MB Current, %d MB Max permitted by PHP', $mem_peak, $mem_usage, $mem_max),
+            'Available PHP Extensions'  => implode(', ', get_loaded_extensions()),
+            'Pf4wp Version'             => PF4WP_VERSION,
+            'Pf4wp APC Enabled'         => (PF4WP_APC) ? 'Yes' : 'No',
+            'WordPress Version'         => $wp_version,
+            'WordPress Debug Mode'      => (defined('WP_DEBUG') && WP_DEBUG) ? 'Yes' : 'No',
+            'Active WordPress Theme'    => $current_theme,
+            'Active Wordpress Plugins'  => implode(', ', $active_plugins),
+            'Browser'                   => $_SERVER['HTTP_USER_AGENT'],
+            'Server'                    => $_SERVER['SERVER_SOFTWARE'],
+            'Server OS'                 => php_uname(),
+            'Database Version'          => $wpdb->get_var('SELECT VERSION()'),
+        );
+
+        if (is_callable(array($this->template, 'getVersion')) && is_callable(array($this->template, 'getEngineName')))
+            $result['Template Engine Version'] = $this->template->getEngineName()  . ' ' . $this->template->getVersion();
+
+        return $result;
+    }
+
     /*---------- Private Helpers (callbacks have a public scope!) ----------*/
 
     /**

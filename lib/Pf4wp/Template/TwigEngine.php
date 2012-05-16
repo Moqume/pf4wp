@@ -19,6 +19,9 @@ namespace Pf4wp\Template;
  */
 class TwigEngine implements EngineInterface
 {
+    private $engine_name = 'Twig';
+
+
     /** Reference to Twig_Environment object
      * @internal
      */
@@ -60,6 +63,28 @@ class TwigEngine implements EngineInterface
     public function getEngine()
     {
         return $this->engine;
+    }
+
+    /**
+     * Returns the version of the Twig engine
+     * @since 1.0.10
+     */
+    public function getVersion()
+    {
+        if (isset($this->engine)) {
+            $engine = $this->engine;
+            return $engine::VERSION;
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns the name of the engine ('Twig')
+     */
+    public function getEngineName()
+    {
+        return $this->engine_name;
     }
 
     /**
