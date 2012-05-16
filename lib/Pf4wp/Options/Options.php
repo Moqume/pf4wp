@@ -129,6 +129,10 @@ abstract class Options
             }
         }
 
+        // Strip any slashes from the result value - @since 1.0.10
+        if (is_string($result))
+            $result = stripslashes($result);
+
         // Store into cache
         $this->cache[$option] = $result;
 
@@ -157,6 +161,26 @@ abstract class Options
         $this->_invalidateCache($option);
 
         $this->set($options);
+    }
+
+    /**
+     * Isset magic for options
+     *
+     * @api
+     * @since 1.0.10
+     */
+    public function __isset($option) {
+        return !is_null($this->__get($option));
+    }
+
+    /**
+     * Unset magic for options
+     *
+     * @api
+     * @since 1.0.10
+     */
+    public function __unset($option) {
+        $this->__set($option, null);
     }
 
     /**
@@ -392,8 +416,12 @@ abstract class Options
             if ((array)$default_value === $default_value) {
                 if ((int)$default_key === $default_key) {
                     // If indexed (multiple entries), ensure each entry has the same default values
-                    foreach ($result as $result_key => $result_value)
+                    foreach ($result as $result_key => $result_value) {
+                        if (is_string($result_value))
+                            $result_value = stripslashes($result_value); // @since 1.0.10
+
                         $result[$result_key] = $this->array_replace_nested($default_value, $result_value);
+                    }
                 } else {
                     $result[$default_key] = $this->array_replace_nested($default_value, $result[$default_key]);
                 }
