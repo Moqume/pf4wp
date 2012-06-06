@@ -1,0 +1,637 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Copyright (c) 2012 Mike Green <myatus@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace Pf4wp\CLI;
+
+class pf4wp
+{
+    // Pre-set:
+    protected $version   = '1.0';
+    protected $exit_code = 0; // Exit code
+
+    // Filled in automatically:
+    protected $args;
+    protected $backup_args;
+    protected $plugin_dir;
+    protected $data_dir;
+    protected $shortname;
+    protected $is_win;
+    private static $instance;
+
+    // Commands:
+    protected $commands = array(
+        'vendor'    => array(
+            'desc'  => 'Install or update vendor packages',
+            'cb'    => array(__CLASS__, 'onVendor'),
+            'help'  => <<<EOF
+This will install, update or optionally re-install vendor packages on the
+system.
+
+Options:
+
+    --install[=<package>[,<package>]] [--yes] [--force]
+
+        Installs or updates (if already installed), all or specified vendor
+        package(s).
+
+        If no vendor package is specified, any optional package will require
+        confirmation during installation. By supplying the '--yes' option,
+        the confirmation will be suppressed by assuming 'Yes'.
+
+        Using the '--force' option will re-install the vendor packages,
+        regardless of any pending commits (!!).
+
+    --list
+
+        List all available packages.
+
+EOF
+        ),
+        'scaffold' => array(
+            'desc'  => 'Creates a base scaffolding for a WordPress plugin',
+            'cb'    => array(__CLASS__, 'onScaffold'),
+            'help'  => <<<EOF
+Builds a scaffolding for the plugin
+
+Options:
+
+    --name=<name>
+
+        Optional. Provides a name for the plugin.
+
+    --uri=<uri>
+
+        Optional. Provides a URI for the plugin.
+
+    --desc=<desc>
+
+        Optional. Provides a description for the plugin. Please ensure to
+        enclose the description in quotes if it contains spaces.
+
+    --author=<author>
+
+        Optional. The name of the plugin author
+
+    --authuri=<author uri>
+
+        Optional. The URI of the author.
+
+    --minwpver=<version>
+
+        Optional. The minimum version of WordPress required for this plugin.
+
+    --minphpver=<version>
+
+        Optional. The mimimum version of PHP required for this plugin.
+
+    --twig
+
+        Optional. Include initialization variables for the Twig template
+        engine in the base plugin file and installs the Twig vendor package if
+        neccesary.
+
+    --notwig
+
+        Optional. Does not include, nor ask about, the Twig template engine.
+
+    --noverify
+
+        Skips the verification question.
+
+    --force
+
+        Forces the building of scaffolding, regardless if the base plugin file
+        already exists.
+
+EOF
+        ),
+    );
+
+    /**
+     * Call using ::instance() instead
+     */
+    protected function __construct() {
+        $this->is_win      = (strpos(strtolower(PHP_OS), 'win') === 0);
+        $this->short_name  = basename(__FILE__);
+        $this->plugin_dir  = realpath(__DIR__ . '/../../../');
+        $this->data_dir    = __DIR__.'/data';
+
+        $this->processOptions();
+        $this->backup_args = $this->args;
+    }
+
+    public function __destruct()
+    {
+        echo "\r\n";
+
+        exit($this->exit_code);
+    }
+
+    /**
+     * Creates a single instance
+     */
+    final public static function instance()
+    {
+        if (!isset(self::$instance))
+            self::$instance = new self();
+
+        return self::$instance;
+    }
+
+    /**
+     * Prints a simple error message
+     */
+    public function errorMsg($string)
+    {
+        fwrite(STDERR, $string . "\r\n");
+    }
+
+    /**
+     * Prints a fatal error message and exits
+     */
+    public function fatalMsg($string, $exit_code = 250)
+    {
+        $this->errorMsg($string);
+
+        if ($this->exit_code == 0)
+            $this->exit_code = $exit_code;
+
+        die();
+    }
+
+    /**
+     * Reads a line from STDIN
+     *
+     * @param int $max_length Maximum length of the input
+     * @return string
+     */
+    public function readLine($max_length = 1024)
+    {
+        return trim(fgets(STDIN, $max_length));
+    }
+
+    /**
+     * Reads a character from STDIN
+     *
+     * @param bool $no_return If true (default), do not wait for RETURN
+     * @return string
+     */
+    public function readChar($no_return = true)
+    {
+        if ($no_return) {
+            $original_stty = trim(@shell_exec('stty -g'));
+            @system('stty -icanon');
+        }
+
+        $result = fread(STDIN, 1);
+
+        if ($no_return)
+            @system('stty ' . escapeshellarg($original_stty));
+
+        return trim($result);
+    }
+
+    /**
+     * Process command line options
+     *
+     * @param array $l_argv An array providing arguments to use instead of the global argv (optional)
+     * @return object Object containing the command, options and raw data provided (if any)
+     */
+    public function processOptions($l_argv = null)
+    {
+        global $argv;
+
+        if (is_array($l_argv)) {
+            $args = $l_argv;
+        } else {
+            $args = $argv; // Let's not modify the global, shall we.
+        }
+
+        array_shift($args); // __FILE__
+
+        if (empty($args))
+            return array('', array(), ''); // No args, we're done
+
+        // Initialize base vars
+        $options     = array();
+        $command     = (strpos($args[0], '-') !== 0) ? strtolower(array_shift($args)) : '';
+        $raw         = '';
+        $option_name = '';
+        $in_raw      = false; // Set to true if remaining arguments should be parsed as raw
+
+        // Process each arg
+        foreach ($args as $arg_k => $arg) {
+            if (strpos($arg, '-') === 0) {
+                if ($arg == '--') {
+                    // All remaining arguments are raw
+                    $in_raw      = true;
+                    $option_name = '';
+                } else {
+                    // New option
+                    $option = ltrim($arg, '-');
+                    if (strpos($option, '=') !== false) {
+                        $option_name           = strstr($option, '=', true);
+                        $options[$option_name] = explode(',', ltrim(strstr($option, '='), '='));
+                    } else {
+                        $option_name           = $option;
+                        $options[$option_name] = array();
+                    }
+                }
+            } else {
+                // Option argument or raw
+                if ($option_name) {
+                    $options[$option_name][] = $arg;
+                    $option_name             = '';
+                } else if ($in_raw) {
+                    $raw .= $arg . ' ';
+                } else if ($arg_k == (count($args) -1)) {
+                    $raw = $arg;
+                }
+            }
+        }
+
+        $this->args = (object)(array(
+            'command' => $command,
+            'options' => $options,
+            'raw'     => rtrim($raw),
+        ));
+
+        return $this->args;
+    }
+
+    /**
+     * Simple helper to check if an option is specified
+     *
+     * @param string|array $option One more options that should exist in $options
+     * @return bool|array False if the option is not available, or array containing option arguments
+     */
+    public function hasOption($option)
+    {
+        if (!is_array($option))
+            $option = explode(',', $option);
+
+        $o = array_intersect_key($this->args->options, array_flip($option));
+
+        if (count($o) == 0)
+            return false;
+
+        return array_shift($o);
+    }
+
+    /**
+     * Simple helper to ask for a value if the option is not specified
+     *
+     * @param string $option Name of the option
+     * @param string $question The question to ask the user, if the option is not specified
+     * @return string Value entered by the user
+     */
+    public function askEmptyOption($option, $question)
+    {
+        $r = $this->hasOption($option);
+
+        if ($r !== false) {
+            if (empty($r)) {
+                return '';
+            } else {
+                return $r[0];
+            }
+        }
+
+        echo $question;
+        return $this->readLine();
+    }
+
+    /**
+     * Simple helper to ask a Yes/No confirmation
+     *
+     * @param string $question The confirmation question
+     * @param bool $default The default if someone uses RETURN to confirm (true = 'Yes', false = 'No')
+     * @return bool True for 'Yes', False for 'No';
+     */
+    public function confirmYesNo($question, $default = true) {
+        $yn     = ($default) ? '[Y/n]' : '[y/N]';
+        $answer = '-';
+
+        while (!in_array($answer, array('', 'y','n'))) {
+            printf("%s %s: ", $question, $yn);
+            $answer = strtolower($this->readChar());
+            echo "\r\n";
+        }
+
+        switch ($answer) {
+            case 'y' : $answer = true;     break;
+            case 'n' : $answer = false;    break;
+            default  : $answer = $default; break;
+        }
+
+        return $answer;
+    }
+
+    /**
+     * Runs the main application
+     */
+    public function run()
+    {
+        // No command specified
+        if (!$this->args->command) {
+            if ($this->hasOption('version') !== false) {
+                printf("%s version %s\r\n", $this->short_name, $this->version);
+                die();
+            }
+        }
+
+        if ($this->args->command) {
+            // Help
+            if ($this->args->command == 'help' && !empty($this->args->raw)) {
+                $raw  = strtolower($this->args->raw);
+                $less = (!$this->is_win) ? @shell_exec('which less') : '';
+
+                if (isset($this->commands[$raw]) && isset($this->commands[$raw]['help'])) {
+                    $help = sprintf("usage for '%s %s':\r\n\r\n%s", $this->short_name, $raw, $this->commands[$raw]['help']);
+
+                    if ($less && ($pipe = popen($less, 'w'))) {
+                        fwrite($pipe, $help);
+                        pclose($pipe);
+                    } else {
+                        echo $help;
+                    }
+
+                } else if (isset($this->commands[$raw])) {
+                    echo "Sorry, no help is available for this command.";
+                } else {
+                    printf("%s: '%s' is not a %1\$s command. See '%1\$s --help'.\r\n", $this->short_name, $this->args->command);
+                }
+
+                die();
+            }
+
+            // Command
+            if (isset($this->commands[$this->args->command]) && is_callable($this->commands[$this->args->command]['cb'])) {
+                call_user_func($this->commands[$this->args->command]['cb']);
+                die();
+            }
+
+            // Unknown command/option
+            printf("%s: '%s' is not a %1\$s command. See '%1\$s --help'.\r\n", $this->short_name, $this->args->command);
+            $this->exit_code = 2;
+            die();
+        }
+
+        $this->printSyntax();
+    }
+
+    /**
+     * Prints the usage syntax
+     */
+    public function printSyntax()
+    {
+        $commands  = '';
+        $usage_str = sprintf("usage: %s", $this->short_name);
+
+        foreach ($this->commands as $command_name => $command_value)
+            $commands .= "    " . $command_name . "\t" . $command_value['desc'] . "\r\n";
+
+        printf("%s [--version] [--help] <command> [<args>]\r\n\r\nAvailable commands are:\r\n%s\r\nSee '%s help <command>' for more information on a specific command.", $usage_str, $commands, $this->short_name);
+    }
+
+    /* ---- Commands ---- */
+
+    /**
+     * Deals with the 'vendor' command
+     *
+     * (Re-)installs or updates vendor packages
+     */
+    public function onVendor() {
+        $vendor_packages_file = $this->data_dir . '/' . $this->short_name . '_vendors.ini';
+
+        if (!@is_file($vendor_packages_file) && !@is_readable($vendor_packages_file))
+            $this->fatalMsg(sprintf("FATAL: Could not locate vendor packages file '%s'.", $vendor_packages_file));
+
+        // Parse available vendors
+        $available_vendors = parse_ini_file($vendor_packages_file, true);
+
+        if (isset($this->args->options['list'])) {
+            echo "Available vendor packages:\r\n\r\n";
+
+            foreach ($available_vendors as $vendor_name => $vendor)
+                printf("    %s\t%s\r\n", $vendor_name, $vendor['desc']);
+        } else if (isset($this->args->options['install'])) {
+            $specific_vendors = $this->args->options['install'];
+            $ask              = (empty($specific_vendors) && !isset($this->args->options['yes']));
+
+            if (!empty($specific_vendors))
+                $available_vendors = array_intersect_key($available_vendors, array_flip($specific_vendors));
+
+            // No available vendors left after specifying specific vendors
+            if (empty($available_vendors) && !empty($specific_vendors))
+                $this->fatalMsg(sprintf("ERROR: Packages(s) '%s' unknown, nothing to install.", implode(', ', $specific_vendors)), 3);
+
+            // Warn about unknown vendors
+            if ($unknown_vendors = array_diff_key(array_flip($specific_vendors), $available_vendors))
+                $this->errorMsg(sprintf("WARNING: Packages(s) '%s' unknown, installing known vendors.\r\n", implode(', ', array_flip($unknown_vendors))));
+
+            foreach ($available_vendors as $vendor_name => $vendor) {
+                $rev         = isset($vendor['version']) ? $vendor['version'] : 'origin/HEAD';
+                $install_dir = $this->plugin_dir . '/' . $vendor['dest'];
+
+                if ($ask && $vendor['optional']) {
+                    if (!$this->confirmYesNo(sprintf("Install %s (%s)?", $vendor_name, $vendor['desc'])))
+                        continue;
+                }
+
+                printf("Installing %s vendor package...\r\n", $vendor_name);
+
+                if (isset($this->args->options['force'])) {
+                    if ($this->is_win) {
+                        system(sprintf('rmdir /S /Q %s', escapeshellarg(realpath($install_dir))));
+                    } else {
+                        system(sprintf('rm -rf %s', escapeshellarg($install_dir)));
+                    }
+                }
+
+                // Clone
+                if (!@is_dir($install_dir))
+                    system(sprintf('git clone %s %s', escapeshellarg($vendor['git']), escapeshellarg($install_dir)));
+
+                // Get status
+                $status = system(sprintf('cd %s && git status --porcelain', escapeshellarg($install_dir)));
+
+                if (!empty($status))
+                    $this->fatalMsg(sprintf("ERROR: '%s' has local modifications. Please revert or commit/push them or use --force.", $vendor_name), 4);
+
+                // Set proper revision
+                $current_rev = system(sprintf('cd %s && git rev-list --max-count=1 HEAD', escapeshellarg($install_dir)));
+                if ($current_rev === $rev)
+                    continue;
+
+                system(sprintf('cd %s && git fetch origin && git reset --hard %s', escapeshellarg($install_dir), escapeshellarg($rev)));
+
+                echo "Done.\r\n";
+            }
+        } else {
+            printf("Not sure what to do. Try '%s help vendor'.\r\n", $this->short_name);
+        }
+    }
+
+    /**
+     * Deals with the 'scaffold' command
+     */
+    public function onScaffold()
+    {
+        $plugin_base_file  = $this->data_dir . '/scaffolding/plugin_base.php';
+        $plugin_class_file = $this->data_dir . '/scaffolding/plugin_class.php';
+        $plugin_base_dest  = $this->plugin_dir . '/' . basename($this->plugin_dir) . '.php';
+
+        if (!@is_file($plugin_base_file) && !@is_readable($plugin_base_file))
+            $this->fatalMsg(sprintf("FATAL: Could not locate plugin base file '%s'.", $plugin_base_file));
+
+        if (!@is_file($plugin_class_file) && !@is_readable($plugin_class_file))
+            $this->fatalMsg(sprintf("FATAL: Could not locate plugin class file '%s'.", $plugin_class_file));
+
+        if (@is_file($plugin_base_dest) && !isset($this->args->options['force'])) {
+            $this->exit_code = 6;
+            $this->fatalMsg(sprintf("ERROR: Base plugin file '%s' already exists. Use '--force' to overwrite.", $plugin_base_dest));
+        }
+
+        $plugin_base  = file_get_contents($plugin_base_file);
+        $plugin_class = file_get_contents($plugin_class_file);
+        $cols         = ($this->is_win) ? 79 : intval(`tput cols`);
+        $hrs          = str_repeat('-', $cols);
+        $hrd          = str_repeat('=', $cols);
+
+        printf("%s\r\nBuilding scaffolding\r\n%1\$s\r\n\r\n", $hrd);
+
+        // Base scaffolding details
+        $scaffold_details = array(
+            'Name'            => $this->askEmptyOption('name',      'What is the name of the plugin [empty]: '),
+            'URI'             => $this->askEmptyOption('uri',       'What is the URI of the plugin [empty]: '),
+            'Description'     => $this->askEmptyOption('desc',      'Provide a short description for the plugin [empty]: '),
+            'Author'          => $this->askEmptyOption('author',    'What is the author\'s name [empty]: '),
+            'Author_URI'      => $this->askEmptyOption('authuri',   'What is the URI of the author [empty]: '),
+            'Min_WP_Version'  => $this->askEmptyOption('minwpver',  'What is the minimum WordPress version for this plugin [3.1.0]: '),
+            'Min_PHP_Version' => $this->askEmptyOption('minphpver', 'What is the minimum PHP version for this plugin [5.3.0]: '),
+        );
+
+        // Namespace details
+        if (($namespace = $this->hasOption('namespace')) !== false)
+            $namespace = (!empty($namespace)) ? $namespace[0] : false;
+
+        if (!$namespace) {
+            // Guess a namespace
+            $uc_author = preg_replace('#\W#u', '', mb_convert_case($scaffold_details['Author'], MB_CASE_TITLE));
+            $uc_name   = preg_replace('#\W#u', '', ucwords($scaffold_details['Name']));
+            $namespace = $uc_author . '\\WordPress\\' . $uc_name;
+        }
+
+        $scaffold_details['Namespace'] = ltrim($namespace, '\\');
+
+        // Template
+        $twig = isset($this->args->options['twig']);
+
+        if (!$twig && !isset($this->args->options['notwig'])) {
+            $twig = $this->confirmYesNo('Would you like to use Twig templating?');
+        }
+
+        // Verify
+        if (!isset($this->args->options['noverify'])) {
+            printf(<<<EOF
+
+%s
+Please verify that the following details are correct:
+%1\$s
+
+Plugin Name:                %s
+Plugin URI:                 %s
+Description:                %s
+Author:                     %s
+Author URI:                 %s
+Minimum WordPress Version:  %s
+Minimum PHP Version:        %s
+Namespace:                  %s
+Use Twig templating:        %s
+
+
+EOF
+                ,
+                $hrs,
+                $scaffold_details['Name'],
+                $scaffold_details['URI'],
+                $scaffold_details['Description'],
+                $scaffold_details['Author'],
+                $scaffold_details['Author_URI'],
+                $scaffold_details['Min_WP_Version'],
+                $scaffold_details['Min_PHP_Version'],
+                $scaffold_details['Namespace'],
+                ($twig) ? 'Yes' : 'No'
+            );
+
+            if (!$this->confirmYesNo('Is this correct?', false)) {
+                $this->exit_code = 251;
+                die("Aborting.");
+            }
+
+            echo "\r\n" . $hrd . "\r\n\r\n";
+        }
+
+        // Last moment adjustments
+        $scaffold_details['Namespace_Double'] = preg_replace('#\\\\#', '\\\\\\\\', $scaffold_details['Namespace']);
+
+        if (!empty($scaffold_details['Min_WP_Version']))
+            $scaffold_details['Min_WP_Version'] = sprintf("\$_pf4wp_version_check_wp = '%s';", $scaffold_details['Min_WP_Version']);
+
+        if (!empty($scaffold_details['Min_PHP_Version']))
+            $scaffold_details['Min_PHP_Version'] = sprintf("\$_pf4wp_version_check_php = '%s';", $scaffold_details['Min_PHP_Version']);
+
+        $scaffold_details['Register_Prefixes'] = ($twig) ? "'Twig_' => __DIR__.'/vendor/Twig/lib'," : '';
+        $scaffold_details['Year'] = date('Y');
+
+        // Build the patterns and replacements
+        $replacements = array_values($scaffold_details);
+        $patterns     = array_keys($scaffold_details);
+        $patterns     = array_map(function($v) { return '@' . $v . '@'; }, $patterns);
+
+        // Add patterns not surrounded by @
+        $patterns[] = '<?php die(); ?>'; $replacements[] = '<?php';
+
+        // Build the plugin base
+        echo "\r\n" . $hrs . "\r\nBuilding plugin base... ";
+
+        file_put_contents($plugin_base_dest, str_replace($patterns, $replacements, $plugin_base));
+
+        echo "Done\r\n";
+
+        // Build the plugin class
+        echo "Building plugin class... ";
+
+        $plugin_class_dest = $this->plugin_dir . '/app/' . str_replace('\\', '/', $scaffold_details['Namespace']) . '/Main.php';
+
+        if (!@is_dir(dirname($plugin_class_dest))) {
+            mkdir(dirname($plugin_class_dest), 0777, true);
+        }
+
+        file_put_contents($plugin_class_dest, str_replace($patterns, $replacements, $plugin_class));
+
+        echo "Done\r\n";
+
+        if ($twig) {
+            // Install Twig vendor package
+            $this->processOptions(array('', 'install', '--install=Twig'));
+            $this->onVendor();
+
+            // Restore original options
+            $this->args = $this->backup_args;
+        }
+
+        printf("\r\n%s\r\n\r\nYour main plugin file is located in:\r\n\r\n%s\r\n\r\nIt is ready for activation.\r\n", $hrs, $plugin_class_dest);
+    }
+}
+
+if (defined('PHP_SAPI') && PHP_SAPI === 'cli') {
+    pf4wp::instance()->run();
+}
