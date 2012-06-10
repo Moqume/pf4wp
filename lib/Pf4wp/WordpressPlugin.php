@@ -31,7 +31,7 @@ use Pf4wp\Template\NullEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 1.0.10
+ * @version 1.0.11
  * @package Pf4wp
  * @api
  */
@@ -66,6 +66,9 @@ class WordpressPlugin
      * @internal
      */
     private $menu = false;
+
+    /** Holds data of already called functions, to prevent them being called again (if only allowed once) */
+    private $was_called = array();
 
     /** An object handling the internal options for the plugin
      * @internal
@@ -113,6 +116,12 @@ class WordpressPlugin
      * @api
      */
     public $public_ajax = false;
+
+    /**
+     * If the template engine should be intiialised during an AJAX call, this variable is set to `true`
+     * @api
+     */
+    public $ajax_uses_template = false;
 
     /**
      * The short name of the plugin
@@ -289,7 +298,9 @@ class WordpressPlugin
         }
 
         // Plugin events (also in Multisite)
-        add_action('after_plugin_row_' . plugin_basename($this->plugin_file), array($this, '_onAfterPluginText'), 10, 0);
+        if (!Helpers::doingAjax()) {
+            add_action('after_plugin_row_' . plugin_basename($this->plugin_file), array($this, '_onAfterPluginText'), 10, 0);
+        }
 
         // Do not register any actions after this if we're in Network Admin mode (unless override with register_admin_mode)
         if (Helpers::isNetworkAdminMode() && !$this->register_admin_mode) {
@@ -298,37 +309,42 @@ class WordpressPlugin
         }
 
         // Template Engine initialization
-        $views_dir       = $this->getPluginDir() . static::VIEWS_DIR;
-        $template_engine = false;
+        $use_template_engine = (Helpers::doingAjax()) ? $this->ajax_uses_template : true;
+        $views_dir           = $this->getPluginDir() . static::VIEWS_DIR;
+        $template_engine     = false;
 
-        if (class_exists($this->template_engine)) {
-            $rc = new \ ReflectionClass($this->template_engine);
-            if ($rc->implementsInterface('Pf4wp\Template\EngineInterface'))
-                $template_engine = $this->template_engine;
+        if ($use_template_engine) {
+            if (class_exists($this->template_engine)) {
+                $rc = new \ ReflectionClass($this->template_engine);
+                if ($rc->implementsInterface('Pf4wp\Template\EngineInterface'))
+                    $template_engine = $this->template_engine;
+            }
+
+            if ($template_engine && @is_dir($views_dir) && @is_readable($views_dir)) {
+                $options = array('_textdomain' => $this->name);
+
+                if (defined('WP_DEBUG') && WP_DEBUG)
+                    $options['debug'] = true;
+
+                if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
+                    $options['cache'] = $cache;
+
+                // Replace these options with those specified by the plugin developer, if any
+                $options = array_replace($options, $this->template_options);
+
+                $this->template = new $template_engine($views_dir, $options);
+            }
         }
 
-        if ($template_engine && @is_dir($views_dir) && @is_readable($views_dir)) {
-            $options = array('_textdomain' => $this->name);
+        if (!Helpers::doingAjax()) {
+            // Internal and Admin events
+            add_action('admin_menu', array($this, '_onAdminRegister'), 10, 0);
+            add_action('wp_dashboard_setup', array($this, 'onDashboardWidgetRegister'), 10, 0);
+            add_action('admin_notices',	array($this, '_onAdminNotices'), 10, 0);
 
-            if (defined('WP_DEBUG') && WP_DEBUG)
-                $options['debug'] = true;
-
-            if (($cache = StoragePath::validate($this->getPluginDir() . static::VIEWS_CACHE_DIR)) !== false)
-                $options['cache'] = $cache;
-
-            // Replace these options with those specified by the plugin developer, if any
-            $options = array_replace($options, $this->template_options);
-
-            $this->template = new $template_engine($views_dir, $options);
+            // Plugin events
+            add_filter('plugin_action_links_' . plugin_basename($this->plugin_file), array($this, '_onPluginActionLinks'), 10, 1);
         }
-
-        // Internal and Admin events
-        add_action('admin_menu', array($this, '_onAdminRegister'), 10, 0);
-        add_action('wp_dashboard_setup', array($this, 'onDashboardWidgetRegister'), 10, 0);
-        add_action('admin_notices',	array($this, '_onAdminNotices'), 10, 0);
-
-		// Plugin events
-        add_filter('plugin_action_links_' . plugin_basename($this->plugin_file), array($this, '_onPluginActionLinks'), 10, 1);
 
         // Public events
         add_action('parse_request',	array($this, '_onPublicInit'), 10, 0);
@@ -664,6 +680,27 @@ class WordpressPlugin
     }
 
     /*---------- Private Helpers (callbacks have a public scope!) ----------*/
+
+    /**
+     * Checks if a function has been called before
+     *
+     * If not called before, it will set it as called and return false, otherwise returns true
+     *
+     * @return bool
+     * @since 1.0.11
+     */
+    final protected function wasCalled($calling_function)
+    {
+        $calling_function = get_called_class() . '\\' . $calling_function;
+
+        // Called before
+        if (isset($this->was_called[$calling_function]))
+            return true;
+
+        // Not called before
+        $this->was_called[$calling_function] = true;
+        return false;
+    }
 
     /**
      * Inserts (echoes) the AJAX variables
@@ -1059,28 +1096,56 @@ class WordpressPlugin
      */
     final public function _onPublicInit()
     {
-        if (is_admin())
+        if (is_admin() || $this->wasCalled('_onPublicInit'))
             return;
 
         add_action('wp_print_scripts',  array($this, '_onPublicScripts'));
-        add_action('wp_print_styles',   array($this, 'onPublicStyles'));
-        add_action('wp_footer',         array($this, 'onPublicFooter'));
+        add_action('wp_print_styles',   array($this, '_onPublicStyles'));
+        add_action('wp_footer',         array($this, '_onPublicFooter'));
 
         $this->onPublicInit();
     }
 
     /**
-     * Event called public scripts
+     * Event called when to print public scripts
      *
      * @see onPublicScripts()
      * @internal
      */
     final public function _onPublicScripts()
     {
+        if ($this->wasCalled('_onPublicScripts')) return; // Can only be called once!
+
         if ($this->public_ajax)
             $this->insertAjaxVars();
 
         $this->onPublicScripts();
+    }
+
+    /**
+     * Event called when to print public styles
+     *
+     * @see onPublicStyles()
+     * @internal
+     */
+    final public function _onPublicStyles()
+    {
+        if ($this->wasCalled('_onPublicStyles')) return; // Can only be called once!
+
+        $this->onPublicStyles();
+    }
+
+    /**
+     * Event called when ready to print public footer
+     *
+     * @see onPublicFooter()
+     * @internal
+     */
+    final public function _onPublicFooter()
+    {
+        if ($this->wasCalled('_onPublicFooter')) return; // Can only be called once!
+
+        $this->onPublicFooter();
     }
 
     /**
