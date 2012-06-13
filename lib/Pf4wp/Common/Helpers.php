@@ -482,7 +482,7 @@ class Helpers
         $spacer      = strpos($_wp_version, '-');
 
         // Remove any extra data
-        if ($spacer >= 0) {
+        if ($spacer !== false) {
             $_wp_version = substr($_wp_version, 0, $spacer);
         }
 
