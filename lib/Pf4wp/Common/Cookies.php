@@ -29,8 +29,8 @@ class Cookies
     public static function has($name)
     {
         return isset($_COOKIE[$name]);
-    }    
-    
+    }
+
     /**
      * Obtain a HTTP Cookie
      *
@@ -42,10 +42,10 @@ class Cookies
     {
         if (isset($_COOKIE[$name]))
             return $_COOKIE[$name];
-            
+
         return $default;
     }
-    
+
     /**
      * Sets an HTTP Cookie
      *
@@ -65,29 +65,45 @@ class Cookies
      */
     public static function set($name, $value = '', $expire = 0, $overwrite = true, $raw = false, $path = '', $domain = '', $secure = false, $httponly = false)
     {
-        if (empty($value)) {
+        $parsed_home_url = parse_url(trailingslashit(get_home_url()));
+
+        if ($value === '') {
             // Delete cookie
             unset($_COOKIE[$name]);
             return @setcookie($name, '', time() - 3600);
         }
-        
+
         // If requested, do not overwrite the cookie if it already exists - this will return "true" as it is not an error
         if (!$overwrite && static::has($name))
-            return true; 
-        
+            return true;
+
         $_COOKIE[$name] = $value;
-        
+
         // Ensure expiration is in future
         $now = time();
         if ($expire != 0 && $expire < $now)
             $expire += $now; // Simply adds current time to the expiration
-        
+
+        // Give it a path, if none specified
+        if ($path === '')
+            $path = $parsed_home_url['path'];
+
+        // Give it a domain, if none specified
+        if ($domain === '') {
+            list($wc, $domain) = explode('.', $parsed_home_url['host'], 2); // Find the top-most part of the domain
+
+            if (strpos($domain, '.') === false)
+                $domain = $parsed_home_url['host']; // top-most part should have at least one period (ie, no "com", "org" top-parts)
+
+            $domain = '.' . $domain;
+        }
+
         if ($raw)
             return @setrawcookie($name, $value, $expire, $path, $domain, $secure, $httponly); // Raw
-        
+
         return @setcookie($name, $value, $expire, $path, $domain, $secure, $httponly);
     }
-    
+
     /**
      * Deletes a cookie
      *
