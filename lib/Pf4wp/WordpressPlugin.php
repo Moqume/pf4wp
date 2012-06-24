@@ -31,7 +31,7 @@ use Pf4wp\Template\NullEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 1.0.12.1
+ * @version 1.0.12.2
  * @package Pf4wp
  * @api
  */

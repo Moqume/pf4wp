@@ -67,23 +67,6 @@ class Cookies
     {
         $parsed_home_url = parse_url(trailingslashit(get_home_url()));
 
-        if ($value === '') {
-            // Delete cookie
-            unset($_COOKIE[$name]);
-            return @setcookie($name, '', time() - 3600);
-        }
-
-        // If requested, do not overwrite the cookie if it already exists - this will return "true" as it is not an error
-        if (!$overwrite && static::has($name))
-            return true;
-
-        $_COOKIE[$name] = $value;
-
-        // Ensure expiration is in future
-        $now = time();
-        if ($expire != 0 && $expire < $now)
-            $expire += $now; // Simply adds current time to the expiration
-
         // Give it a path, if none specified
         if ($path === '')
             $path = $parsed_home_url['path'];
@@ -97,6 +80,23 @@ class Cookies
 
             $domain = '.' . $domain;
         }
+
+        if ($value === '') {
+            // Delete cookie
+            unset($_COOKIE[$name]);
+            return @setcookie($name, '', time() - 3600, $path, $domain, $secure, $httponly);
+        }
+
+        // If requested, do not overwrite the cookie if it already exists - this will return "true" as it is not an error
+        if (!$overwrite && static::has($name))
+            return true;
+
+        $_COOKIE[$name] = $value;
+
+        // Ensure expiration is in future
+        $now = time();
+        if ($expire != 0 && $expire < $now)
+            $expire += $now; // Simply adds current time to the expiration
 
         if ($raw)
             return @setrawcookie($name, $value, $expire, $path, $domain, $secure, $httponly); // Raw
