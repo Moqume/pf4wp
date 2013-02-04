@@ -189,23 +189,25 @@ class WordpressPlugin
         // pre-Initialize the template engine to a `null` engine
         $this->template = new NullEngine();
 
-        // Register (de)activation hooks
-        register_activation_hook(plugin_basename($this->plugin_file), array($this, '_onActivation'));
-        register_deactivation_hook(plugin_basename($this->plugin_file), array($this, '_onDeactivation'));
+        if (is_admin()) {
+            // Register (de)activation hooks
+            register_activation_hook(plugin_basename($this->plugin_file), array($this, '_onActivation'));
+            register_deactivation_hook(plugin_basename($this->plugin_file), array($this, '_onDeactivation'));
 
-        // Register uninstall hook (@since 1.0.14: added check if already registered, as WP does not do this and only needs to be done once)
-        if (!$this->internal_options->registered_uninstall) {
-            register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
-            $this->internal_options->registered_uninstall = true;
+            // Register uninstall hook (@since 1.0.14: added check if already registered, as WP does not do this and only needs to be done once)
+            if (!$this->internal_options->registered_uninstall) {
+                register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
+                $this->internal_options->registered_uninstall = true;
+            }
+
+            // Register an action for when a new blog is created on multisites
+            if (function_exists('is_multisite') && is_multisite())
+                add_action('wpmu_new_blog', array($this, '_onNewBlog'), 10, 1);
+
+            // Widgets get initialized individually (and before WP `init` action) - PITA!
+            if ( !Helpers::isNetworkAdminMode() )
+                add_action('widgets_init', array($this, 'onWidgetRegister'), 10, 0);
         }
-
-        // Register an action for when a new blog is created on multisites
-        if (function_exists('is_multisite') && is_multisite())
-            add_action('wpmu_new_blog', array($this, '_onNewBlog'), 10, 1);
-
-        // Widgets get initialized individually (and before WP `init` action) - PITA!
-        if ( !Helpers::isNetworkAdminMode() )
-            add_action('widgets_init', array($this, 'onWidgetRegister'), 10, 0);
     }
 
     /**
@@ -301,19 +303,25 @@ class WordpressPlugin
         if ($this->registered || empty($this->plugin_file))
             return;
 
-        // Load locales
+        // Load locale
         $locale = get_locale();
         if ( !empty($locale) ) {
-            $mofile = $this->getPluginDir() . static::LOCALIZATION_DIR . $locale . '.mo';
+            $mofile_locations = array(
+                $this->getPluginDir() . static::LOCALIZATION_DIR . $locale . '.mo', // Plugin local l10n directory
+                WP_LANG_DIR . '/' . $this->name . '-' . get_locale() . '.mo',       // Global l10n directory
+            );
 
-            if ( @is_file($mofile) && @is_readable($mofile) )
-                load_textdomain($this->name, $mofile);
+            foreach ($mofile_locations as $mofile_location) {
+                if ( @is_file($mofile_location) && @is_readable($mofile_location) ) {
+                    load_textdomain($this->name, $mofile_location);
+                    break;
+                }
+            }
         }
 
         // Plugin events (also in Multisite)
-        if (!Helpers::doingAjax()) {
+        if (!Helpers::doingAjax() && is_admin())
             add_action('after_plugin_row_' . plugin_basename($this->plugin_file), array($this, '_onAfterPluginText'), 10, 0);
-        }
 
         // Do not register any actions after this if we're in Network Admin mode (unless override with register_admin_mode)
         if (Helpers::isNetworkAdminMode() && !$this->register_admin_mode) {
@@ -349,7 +357,7 @@ class WordpressPlugin
             }
         }
 
-        if (!Helpers::doingAjax()) {
+        if (!Helpers::doingAjax() && is_admin()) {
             // Internal and Admin events
             add_action('admin_menu', array($this, '_onAdminRegister'), 10, 0);
             add_action('wp_dashboard_setup', array($this, 'onDashboardWidgetRegister'), 10, 0);
@@ -372,29 +380,31 @@ class WordpressPlugin
 
         $this->onRegisterActions();
 
-        // Check if there are any on-demand filters requested
-        $filters = array();
-        if (isset($_REQUEST['filter']))
-            $filters = explode(',', $_REQUEST['filter']);
+        // Check if there are any on-demand admin filters requested
+        if (is_admin()) {
+            $filters = array();
+            if (isset($_REQUEST['filter']))
+                $filters = explode(',', $_REQUEST['filter']);
 
-        // And check the referer arguments as well if this is a POST request
-        if (!empty($_POST) && isset($_SERVER['HTTP_REFERER'])) {
-            $referer_args = explode('&', ltrim(strstr($_SERVER['HTTP_REFERER'], '?'), '?'));
-            foreach ($referer_args as $referer_arg)
-                if (!empty($referer_arg) && strpos($referer_arg, '=') !== false) {
-                    list($arg_name, $arg_value) = explode('=', $referer_arg);
-                    if ($arg_name == 'filter') {
-                        $filters = array_replace($filters, explode(',', $arg_value));
-                        break;
+            // And check the referer arguments as well if this is a POST request
+            if (!empty($_POST) && isset($_SERVER['HTTP_REFERER'])) {
+                $referer_args = explode('&', ltrim(strstr($_SERVER['HTTP_REFERER'], '?'), '?'));
+                foreach ($referer_args as $referer_arg)
+                    if (!empty($referer_arg) && strpos($referer_arg, '=') !== false) {
+                        list($arg_name, $arg_value) = explode('=', $referer_arg);
+                        if ($arg_name == 'filter') {
+                            $filters = array_replace($filters, explode(',', $arg_value));
+                            break;
+                        }
                     }
-                }
+            }
+
+            // Remove any possible duplicates from filters
+            $filters = array_unique($filters);
+
+            // Fire filter events
+            foreach ($filters as $filter) $this->onFilter($filter);
         }
-
-        // Remove any possible duplicates from filters
-        $filters = array_unique($filters);
-
-        // Fire filter events
-        foreach ($filters as $filter) $this->onFilter($filter);
 
         // Done!
         $this->registered = true;
@@ -409,7 +419,7 @@ class WordpressPlugin
      * @api
      */
     public function __t($string) {
-        return __($string, $this->getName());
+        return __($string, $this->name);
     }
 
     /**
@@ -949,9 +959,6 @@ class WordpressPlugin
      */
     final public function _onAdminRegister()
     {
-        if (!is_admin())
-            return;
-
         // Additional actions to be registered
         $this->onAdminInit();
 
@@ -983,9 +990,6 @@ class WordpressPlugin
      */
     final public function _onAfterPluginText()
     {
-        if (!is_admin())
-            return;
-
         $text = $this->onAfterPluginText();
 
         if ( !empty($text) )
@@ -1003,9 +1007,6 @@ class WordpressPlugin
      */
     final public function _onPluginActionLinks($actions)
     {
-        if (!is_admin())
-            return;
-
         $url = $this->getParentMenuUrl();
 
         if ( !is_array($actions) )
@@ -1064,9 +1065,6 @@ class WordpressPlugin
      */
     final public function _onAdminNotices()
     {
-        if (!is_admin())
-            return;
-
         $queue = $this->internal_options->delayed_notices;
 
         if (!empty($queue)) {
