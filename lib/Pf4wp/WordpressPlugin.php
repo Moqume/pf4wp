@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2013 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -31,7 +31,7 @@ use Pf4wp\Template\NullEngine;
  * WordPress: 3.1.0
  *
  * @author Mike Green <myatus@gmail.com>
- * @version 1.0.12.2
+ * @version 1.0.14
  * @package Pf4wp
  * @api
  */
@@ -79,8 +79,9 @@ class WordpressPlugin
      * @internal
      */
     private $default_internal_options = array(
-        'version' => '0.0',             // The version of the plugin, to track upgrade events
-        'delayed_notices' => array(),   // Array containing notices that aren't displayed until possible to show them
+        'version'               => '0.0',           // The version of the plugin, to track upgrade events
+        'delayed_notices'       => array(),         // Array containing notices that aren't displayed until possible to show them
+        'registered_uninstall'  => false,           // Flag to indicate a registration hook has been registered - @since 1.0.14
     );
 
     /**
@@ -122,6 +123,13 @@ class WordpressPlugin
      * @api
      */
     public $ajax_uses_template = false;
+
+    /**
+     * If set to `true`, public AJAX calls will be checked against a provided nonce (default)
+     * @since 1.0.13
+     * @api
+     */
+    public $verify_public_ajax = true;
 
     /**
      * The short name of the plugin
@@ -181,10 +189,15 @@ class WordpressPlugin
         // pre-Initialize the template engine to a `null` engine
         $this->template = new NullEngine();
 
-        // Register uninstall and (de)activation hooks
+        // Register (de)activation hooks
         register_activation_hook(plugin_basename($this->plugin_file), array($this, '_onActivation'));
         register_deactivation_hook(plugin_basename($this->plugin_file), array($this, '_onDeactivation'));
-        register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
+
+        // Register uninstall hook (@since 1.0.14: added check if already registered, as WP does not do this and only needs to be done once)
+        if (!$this->internal_options->registered_uninstall) {
+            register_uninstall_hook(plugin_basename($plugin_file), get_class($this) . '::_onUninstall');
+            $this->internal_options->registered_uninstall = true;
+        }
 
         // Register an action for when a new blog is created on multisites
         if (function_exists('is_multisite') && is_multisite())
@@ -352,7 +365,7 @@ class WordpressPlugin
         // AJAX events
         add_action('wp_ajax_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
         if ($this->public_ajax)
-            add_action('wp_ajax_nopriv_' . $this->name, array($this, '_onAjaxCall'), 10, 0);
+            add_action('wp_ajax_nopriv_' . $this->name, array($this, '_onPublicAjaxCall'), 10, 0);
 
         // Register a final action when WP has been loaded
         add_action('wp_loaded', array($this, '_onWpLoaded'), 10, 0);
@@ -458,7 +471,7 @@ class WordpressPlugin
     public function getResourceUrl($type = 'js')
     {
         $url     = trailingslashit($this->getPluginUrl() . static::RESOURCES_DIR . $type);
-        $version = PluginInfo::getInfo(true, $this->getPluginBaseName(), 'Version');
+        $version = $this->getVersion();
         $debug   = (defined('WP_DEBUG') && WP_DEBUG) ? '.dev' : '';
 
         return array($url, $version, $debug);
@@ -487,7 +500,7 @@ class WordpressPlugin
      */
     public function getDisplayName()
     {
-        return PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Name');
+        return PluginInfo::getDirectPluginInfo($this->plugin_file, 'Name');
     }
 
     /**
@@ -498,7 +511,7 @@ class WordpressPlugin
      */
     public function getVersion()
     {
-        return PluginInfo::getInfo(false, plugin_basename($this->plugin_file), 'Version');
+        return PluginInfo::getDirectPluginInfo($this->plugin_file, 'Version');
     }
 
     /**
@@ -1002,8 +1015,8 @@ class WordpressPlugin
             array_unshift($actions, sprintf(
                 '<a href="%s" title="%s">%s</a>',
                 $url,
-                __('Configure this plugin', $this->name),
-                __('Settings', $this->name))
+                $this->__t('Configure this plugin'),
+                $this->__t('Settings'))
             );
 
         return $actions;
@@ -1072,20 +1085,35 @@ class WordpressPlugin
      * @see onAjaxRequest(), ajaxResponse()
      * @internal
      */
-    final public function _onAjaxCall()
+    final public function _onAjaxCall($verify_ajax = true)
     {
-        check_ajax_referer($this->name . '-ajax-call'); // Dies if the check fails
+        if ($verify_ajax)
+            check_ajax_referer($this->name . '-ajax-call'); // Dies if the check fails
 
         header('Content-type: application/json');
 
         if ( !isset($_POST['func']) ||
              !isset($_POST['data']) )
-            $this->ajaxResponse(__('Malformed AJAX Request', $this->name), true);
+            $this->ajaxResponse($this->__t('Malformed AJAX Request'), true);
 
         $this->onAjaxRequest((string)$_POST['func'], $_POST['data']);
 
         // Default response
         $this->ajaxResponse('', true);
+    }
+
+    /**
+     * Process a public AJAX call
+     *
+     * Note: This will not be called if the admin is logged in, which will use _onAjaxCall instead
+     *
+     * @see onAjaxRequest(), ajaxResponse()
+     * @since 1.0.13
+     * @internal
+     */
+    final public function _onPublicAjaxCall()
+    {
+        $this->_onAjaxCall($this->verify_public_ajax);
     }
 
     /**
@@ -1162,7 +1190,7 @@ class WordpressPlugin
         $content = '';
 
         if ($count == 1)
-            $content .= '<div style="clear:both"></div><h1>' . __('Oops! Something went wrong', $this->name) . ':</h1>';
+            $content .= '<div style="clear:both"></div><h1>' . $this->__t('Oops! Something went wrong') . ':</h1>';
 
         $content .= sprintf('<div class="postbox"><h2 style="border-bottom:1px solid #ddd;margin-bottom:10px;padding:5px;"><span>#%s</span> %s: %s</h2><ol>',
             $count,
@@ -1174,7 +1202,7 @@ class WordpressPlugin
             $content .= '<li>';
 
             if ($trace['function']) {
-                $content .= sprintf( __('at %s%s%s()', $this->name),
+                $content .= sprintf( $this->__t('at %s%s%s()'),
                     (isset($trace['class'])) ? $abbr($trace['class']) : '',
                     (isset($trace['type'])) ? $trace['type'] : '',
                     $trace['function']
@@ -1182,7 +1210,7 @@ class WordpressPlugin
             }
 
             if (isset($trace['file']) && isset($trace['line'])) {
-                $content .= sprintf( __(' in <code>%s</code> line %s', $this->name),
+                $content .= sprintf( $this->__t(' in <code>%s</code> line %s'),
                     $trace['file'],
                     $trace['line']
                 );

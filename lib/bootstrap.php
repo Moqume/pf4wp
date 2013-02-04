@@ -132,4 +132,4 @@ $_pf4wp_check_pass = true;
 
 // Set the version
 if (!defined('PF4WP_VERSION'))
-    define('PF4WP_VERSION', '1.0.12.2');
+    define('PF4WP_VERSION', '1.0.14');
