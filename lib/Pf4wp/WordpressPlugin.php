@@ -1016,8 +1016,8 @@ class WordpressPlugin
             array_unshift($actions, sprintf(
                 '<a href="%s" title="%s">%s</a>',
                 $url,
-                $this->__t('Configure this plugin'),
-                $this->__t('Settings'))
+                __('Configure this plugin', $this->name),
+                __('Settings', $this->name))
             );
 
         return $actions;
@@ -1092,7 +1092,7 @@ class WordpressPlugin
 
         if ( !isset($_POST['func']) ||
              !isset($_POST['data']) )
-            $this->ajaxResponse($this->__t('Malformed AJAX Request'), true);
+            $this->ajaxResponse(__('Malformed AJAX Request', $this->name), true);
 
         $this->onAjaxRequest((string)$_POST['func'], $_POST['data']);
 
@@ -1188,7 +1188,7 @@ class WordpressPlugin
         $content = '';
 
         if ($count == 1)
-            $content .= '<div style="clear:both"></div><h1>' . $this->__t('Oops! Something went wrong') . ':</h1>';
+            $content .= '<div style="clear:both"></div><h1>' . __('Oops! Something went wrong', $this->name) . ':</h1>';
 
         $content .= sprintf('<div class="postbox"><h2 style="border-bottom:1px solid #ddd;margin-bottom:10px;padding:5px;"><span>#%s</span> %s: %s</h2><ol>',
             $count,
@@ -1200,7 +1200,7 @@ class WordpressPlugin
             $content .= '<li>';
 
             if ($trace['function']) {
-                $content .= sprintf( $this->__t('at %s%s%s()'),
+                $content .= sprintf( __('at %s%s%s()', $this->name),
                     (isset($trace['class'])) ? $abbr($trace['class']) : '',
                     (isset($trace['type'])) ? $trace['type'] : '',
                     $trace['function']
@@ -1208,7 +1208,7 @@ class WordpressPlugin
             }
 
             if (isset($trace['file']) && isset($trace['line'])) {
-                $content .= sprintf( $this->__t(' in <code>%s</code> line %s'),
+                $content .= sprintf( __(' in <code>%s</code> line %s', $this->name),
                     $trace['file'],
                     $trace['line']
                 );
