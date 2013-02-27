@@ -256,8 +256,11 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
             if (defined('PF4WP_APC') && PF4WP_APC === true) {
                 // Use internal method
                 $cache = apc_fetch($this->int_key);
+
+                if (extension_loaded('zlib') && $cache)
+                    $cache = @unserialize(gzinflate($cache));
             } else {
-                // Use WordPress' method (APC, memcache, W3 Total Cache, etc.)
+                // Use WordPress' method (Memcache, W3 Total Cache, etc.)
                 $cache = wp_cache_get($this->wp_key, $this->group);
             }
 
@@ -283,7 +286,13 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
         if (($time - $this->storage_time) > $this->max_storage_age || $force === true) {
             // Write changes to cache
             if (defined('PF4WP_APC') && PF4WP_APC === true) {
-                $success = apc_store($this->int_key, $this->storage, $this->max_age);
+                $data = $this->storage;
+
+                // Compress the data, if possible (increases chance of storing large data at cost of a few ms)
+                if (extension_loaded('zlib'))
+                    $data = gzdeflate(serialize($data), 6);
+
+                $success = apc_store($this->int_key, $data, $this->max_age);
             } else {
                 $success = wp_cache_set($this->wp_key, $this->storage, $this->group, $this->max_age);
             }
