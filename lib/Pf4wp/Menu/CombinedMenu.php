@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011-2012 Mike Green <myatus@gmail.com>
+ * Copyright (c) 2011-2013 Mike Green <myatus@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -20,22 +20,22 @@ namespace Pf4wp\Menu;
 class CombinedMenu extends StandardMenu
 {
     const SUBMENU_ID = 'sub';
-    
+
     /** Holds the current active menu
      * @internal
      */
     private $active_menu;
-    
+
     /** Holds the active parent menu slug
      * @internal
      */
     private $active_parent_slug;
-  
+
     /** The title of the "Home" menu entry (first menu entry displayed)
      * @internal
      */
     protected $home_title = '';
-    
+
     /**
      * Constructor
      *
@@ -46,10 +46,10 @@ class CombinedMenu extends StandardMenu
     public function __construct($id = '', $textdomain = '')
     {
         parent::__construct($id, $textdomain);
-        
+
         $this->home_title = __('Home', $this->textdomain);
     }
-    
+
     /**
      * Sets the default home title for subheaders
      *
@@ -60,7 +60,7 @@ class CombinedMenu extends StandardMenu
     {
         $this->home_title = $new_home_title;
     }
-        
+
     /**
      * Returns the active menu entry
      *
@@ -72,27 +72,27 @@ class CombinedMenu extends StandardMenu
         if (empty($this->active_menu)) {
             $this->active_menu = false;
             $active_submenu = (array_key_exists(self::SUBMENU_ID, $_GET)) ? trim((string)$_GET[self::SUBMENU_ID]) : '';
-            
-            /* Check if the submenu actually exists, and if not, return the 
+
+            /* Check if the submenu actually exists, and if not, return the
              * parent as the active menu. But the cached value will NOT be
              * set at this point.
              */
             if (!array_key_exists($active_submenu, $this->menus))
                 return $this->menus[$this->parent];
-            
+
             foreach ($this->menus as $menu) {
                 if ((empty($active_submenu) && $menu->isActive()) || $active_submenu == $menu->_properties['slug'])
                     $this->active_menu = $menu;
             }
         }
-        
+
         return $this->active_menu;
     }
-    
+
     /**
      * Returns the active parent menu slug (for subheaders)
      *
-     * This differens from obtaining the active menu, as this will also include the 
+     * This differens from obtaining the active menu, as this will also include the
      * submenus and is used to display the right subheaders for the displayed (sub)menu.
      *
      * @return string|bool Slug for the active parent menu, `false` if invalid
@@ -102,16 +102,16 @@ class CombinedMenu extends StandardMenu
     {
         if (!isset($this->active_parent_slug)) {
             $this->active_parent_slug = false;
-            
+
             foreach ($this->menus as $menu) {
                 if (!$menu->_properties['use_subheaders'] && $menu->isActive())
                     $this->active_parent_slug = $menu->_properties['slug'];
             }
         }
-        
+
         return $this->active_parent_slug;
     }
-    
+
     /**
      * Adds a new menu item
      *
@@ -134,10 +134,10 @@ class CombinedMenu extends StandardMenu
 
         $menu->_properties['use_subheaders'] = false;
         $menu->_properties['before_callback'] = array($this, 'onRenderSubHeader');
-        
+
         return $menu;
     }
-    
+
     /**
      * Adds a subheader item
      *
@@ -154,13 +154,13 @@ class CombinedMenu extends StandardMenu
     public function addSubHeader(MenuEntry $parent_menu, $title, $callback, $callback_args = false)
     {
         $menu = $this->addSubMenu($title, $callback, $callback_args);
-        
+
         $menu->_properties['use_subheaders'] = true;
         $menu->_properties['parent_slug']    = $parent_menu->_properties['slug']; // So we know under which (sub)menu to show the headers
-        
+
         return $menu;
     }
-    
+
     /**
      * Determines whether a Subheader should be displayed
      *
@@ -171,58 +171,84 @@ class CombinedMenu extends StandardMenu
     public function doRenderSubHeader(MenuEntry $menu, &$title)
     {
         $active_parent_slug = $this->getActiveParentSlug();
-    
+
         $res = (($menu->_properties['use_subheaders'] && $menu->_properties['parent_slug'] == $active_parent_slug) || $menu->_properties['slug'] == $active_parent_slug);
-        
+
         if ($res)
             $title = ($menu->_properties['slug'] != $active_parent_slug) ? $menu->title : $this->home_title;
-            
+
         return $res;
     }
-    
+
     /* Events */
-    
+
     /**
      * Renders a submenu-header on the page
      *
-     * This event is triggered by a menu entry's 'before_callback'. It will 
-     * return a callback if it is different than the original callback (due to 
+     * This event is triggered by a menu entry's 'before_callback'. It will
+     * return a callback if it is different than the original callback (due to
      * active page selection), or `null` otherwise
      *
      * @return mixed
-     */     
+     */
     public function onRenderSubHeader()
     {
         $result = null;
-        
-        $subheaders = array();
-        $active_menu = $this->getActiveMenu();
+
+        $subheaders         = array();
+        $active_menu        = $this->getActiveMenu();
         $active_parent_slug = $this->getActiveParentSlug();
-        
+        $sub_as_nav         = false; // since 1.0.16
+
         foreach ($this->menus as $menu) {
             if ($this->doRenderSubHeader($menu, $title)) {
+                $is_top_sub = ($menu->_properties['slug'] == $this->getActiveParentSlug());
+
+                if (!$sub_as_nav && $menu->sub_as_nav && $is_top_sub)
+                    $sub_as_nav = true; // Once set, keep it set
+                // @TODO: Make sure sub_as_nav only gets set for the top level
+
                 $is_active = ($active_menu == $menu);
                 $title     = ($menu->count !== false) ? sprintf('%s <span class="count">(%d)</span>', $title, $menu->count) : $title;
-                $url       = (empty($menu->_properties['parent_slug'])) ? menu_page_url($menu->_properties['slug'], false) : add_query_arg(array(self::SUBMENU_ID=>$menu->_properties['slug']), menu_page_url($menu->_properties['parent_slug'], false));
-                
-				$subheaders[] = sprintf(
-                    '<li><a href="%s" %s>%s</a>', 
-                    htmlspecialchars($url),
-                    ($is_active) ? 'class="current"' : '',
-                    $title
-                );
-                
+
+                if (empty($menu->_properties['parent_slug']) || $is_top_sub) {
+                    $url = menu_page_url($menu->_properties['slug'], false);
+                } else {
+                    $url = add_query_arg(array(self::SUBMENU_ID=>$menu->_properties['slug']), menu_page_url($menu->_properties['parent_slug'], false));
+                }
+
+                if ($sub_as_nav) {
+                    $subheaders[] = sprintf(
+                        '<a href="%s" class="nav-tab %s">%s</a>',
+                        htmlspecialchars($url),
+                        ($is_active) ? 'nav-tab-active' : '',
+                        $title
+                    );
+                } else {
+                    $subheaders[] = sprintf(
+                        '<li><a href="%s" %s>%s</a>',
+                        htmlspecialchars($url),
+                        ($is_active) ? 'class="current"' : '',
+                        $title
+                    );
+                }
+
                 // Override the menu callbacks
                 if ($is_active)
                     $result = $menu;
             }
         }
-               
-        if (count($subheaders) > 1)
-            printf('<div><ul class="subsubsub">%s</li></ul></div>', implode(" | </li>", $subheaders));
-        
+
+        if (count($subheaders) > 1) {
+            if ($sub_as_nav) {
+                printf('<div id="nav"><h2 class="nav-tab-wrapper">%s</h2></div>', implode("", $subheaders));
+            } else {
+                printf('<div><ul class="subsubsub">%s</li></ul></div>', implode(" | </li>", $subheaders));
+            }
+        }
+
         return $result;
     }
 }
 
- 
+

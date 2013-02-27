@@ -152,6 +152,13 @@ class WordpressPlugin
     protected $default_options = array();
 
     /**
+     * Flag to check if a locale has been loaded
+     * @since 1.0.16
+     * @api
+     */
+    protected $locale_loaded = false;
+
+    /**
      * Constructor (Protected; use instance())
      *
      * @see instance()
@@ -314,6 +321,7 @@ class WordpressPlugin
             foreach ($mofile_locations as $mofile_location) {
                 if ( @is_file($mofile_location) && @is_readable($mofile_location) ) {
                     load_textdomain($this->name, $mofile_location);
+                    $this->locale_loaded = true;
                     break;
                 }
             }
@@ -667,33 +675,78 @@ class WordpressPlugin
      */
     public function getDebugInfo()
     {
-        global $wp_version, $wpdb;
+        global $wp_version, $wpdb, $wp_object_cache;
 
-        $active_plugins = array();
-        $mem_peak       = (function_exists('memory_get_peak_usage')) ? memory_get_peak_usage() / 1048576 : 0;
-        $mem_usage      = (function_exists('memory_get_usage')) ? memory_get_usage() / 1048576 : 0;
-        $mem_max        = (int) @ini_get('memory_limit');
-        $current_theme  = (function_exists('wp_get_theme')) ? wp_get_theme() : get_current_theme(); // WP 3.4
+        $active_plugins  = array();
+        $mem_peak        = (function_exists('memory_get_peak_usage')) ? memory_get_peak_usage() / 1048576 : 0;
+        $mem_usage       = (function_exists('memory_get_usage')) ? memory_get_usage() / 1048576 : 0;
+        $mem_max         = (int) @ini_get('memory_limit');
+        $mem_max_wp      = (defined('WP_MEMORY_LIMIT')) ? WP_MEMORY_LIMIT : 0;
+        $upload_max      = (int) @ini_get('upload_max_filesize');
+        $upload_max_post = (int) @ini_get('post_max_size');
+        $upload_max_wp   = (function_exists('wp_max_upload_size')) ? wp_max_upload_size() / 1048576 : 0;
+        $current_theme   = (function_exists('wp_get_theme')) ? wp_get_theme() : get_current_theme(); // WP 3.4
+        $php_extensions  = get_loaded_extensions();
 
+
+        // Determine Object Cache
+        $obj_cache_class      = get_class($wp_object_cache);
+        $obj_cache_class_vars = get_class_vars($obj_cache_class);
+        $obj_cache            = 'Unknown (' . $obj_cache_class .')';
+
+        if ($obj_cache_class == 'APC_Object_Cache') {
+            $obj_cache = 'APC Object Cache';
+        } else if ($obj_cache_class == 'W3_ObjectCacheBridge') {
+            $obj_cache = 'W3 Total Cache';
+        } else if (array_key_exists('mc', $obj_cache_class_vars)) {
+            $obj_cache = 'Memcache Object Cache';
+        } else if (array_key_exists('global_groups', $obj_cache_class_vars)) {
+            $obj_cache = 'WordPress Default';
+        }
+
+        // Sort PHP extensions alphabetically
+        usort($php_extensions, 'strcasecmp');
+
+        // Fill active plugins array
         foreach (\Pf4wp\Info\PluginInfo::getInfo(true) as $plugin)
-            $active_plugins[] = sprintf("'%s' by %s", $plugin['Name'], $plugin['Author']);
+            $active_plugins[] = sprintf("'%s' by %s version %s", $plugin['Name'], $plugin['Author'], $plugin['Version']);
 
         $result = array(
             'Generated On'              => gmdate('D, d M Y H:i:s') . ' GMT',
             $this->getDisplayName() . ' Version' => $this->getVersion(),
-            'PHP Version'               => PHP_VERSION,
-            'Memory Usage'              => sprintf('%.2f MB Peak, %.2f MB Current, %d MB Max permitted by PHP', $mem_peak, $mem_usage, $mem_max),
-            'Available PHP Extensions'  => implode(', ', get_loaded_extensions()),
-            'Pf4wp Version'             => PF4WP_VERSION,
-            'Pf4wp APC Enabled'         => (PF4WP_APC) ? 'Yes' : 'No',
+
+            /* Memory/Uploads Limits */
+            'Memory'                    => null,
+            'Memory Usage'              => sprintf('%.2f Mbytes peak, %.2f Mbytes current', $mem_peak, $mem_usage),
+            'Memory Limits'             => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes', $mem_max_wp, $mem_max),
+            'Maximum Upload Sizes'      => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes filesize, %d Mbytes POST size', $upload_max_wp, $upload_max, $upload_max_post),
+
+            /* WordPress */
+            'WordPress'                 => null,
             'WordPress Version'         => $wp_version,
-            'WordPress Debug Mode'      => (defined('WP_DEBUG') && WP_DEBUG) ? 'Yes' : 'No',
-            'Active WordPress Theme'    => $current_theme,
             'Active Wordpress Plugins'  => implode(', ', $active_plugins),
+            'Active WordPress Theme'    => $current_theme,
+            'Locale'                    => sprintf('%s (%s)', get_locale(), ($this->locale_loaded) ? 'Loaded' : 'Not Loaded'),
+            'Debug Mode'                => (defined('WP_DEBUG') && WP_DEBUG) ? 'Yes' : 'No',
+            'Object Cache'              => $obj_cache,
+
+            /* PHP */
+            'PHP'                       => null,
+            'PHP Version'               => PHP_VERSION,
+            'Available PHP Extensions'  => implode(', ', $php_extensions),
+
+            /* Server / Client Environment */
+            'Server/Client Environment' => null,
             'Browser'                   => $_SERVER['HTTP_USER_AGENT'],
-            'Server'                    => $_SERVER['SERVER_SOFTWARE'],
+            'Server Software'           => $_SERVER['SERVER_SOFTWARE'],
             'Server OS'                 => php_uname(),
             'Database Version'          => $wpdb->get_var('SELECT VERSION()'),
+
+            /* pf4wp */
+            'pf4wp'                     => null,
+            'pf4wp Version'             => PF4WP_VERSION,
+            'pf4wp APC Enabled'         => (PF4WP_APC) ? 'Yes' : 'No',
+            'Template Cache Directory'  => is_writable($this->getPluginDir() . static::VIEWS_CACHE_DIR) ? 'Writeable' : 'Not Writeable',
         );
 
         if (is_callable(array($this->template, 'getVersion')) && is_callable(array($this->template, 'getEngineName')))
