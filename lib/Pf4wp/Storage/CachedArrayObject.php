@@ -86,19 +86,16 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
         $this->setMaxStorageAge($max_storage_age);
 
         // Generic persistence tests
-        if (defined('PF4WP_APC')) {
+        if (defined('PF4WP_APC') && PF4WP_APC === true) {
             $this->can_persist = (apc_fetch(self::PERSIST_TEST_KEY) === true);
+
+            if (!$this->can_persist)
+                apc_store(self::PERSIST_TEST_KEY, true);
         } else {
             $this->can_persist = (wp_cache_get(self::PERSIST_TEST_KEY) === true);
-        }
 
-        // If the test key was not found, write it - the next session will pick this up
-        if (!$this->can_persist) {
-            if (defined('PF4WP_APC')) {
-                apc_store(self::PERSIST_TEST_KEY, true);
-            } else {
+            if (!$this->can_persist)
                 wp_cache_set(self::PERSIST_TEST_KEY, true);
-            }
         }
 
         // Ensure we're working with the correct cache on a MultiSite
@@ -256,7 +253,7 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
             // Ensure a dirty cache is flushed
             $this->flushCache();
 
-            if (defined('PF4WP_APC')) {
+            if (defined('PF4WP_APC') && PF4WP_APC === true) {
                 // Use internal method
                 $cache = apc_fetch($this->int_key);
             } else {
@@ -285,7 +282,7 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
         // If it is time to sync the local storage with cache, or forced...
         if (($time - $this->storage_time) > $this->max_storage_age || $force === true) {
             // Write changes to cache
-            if (defined('PF4WP_APC')) {
+            if (defined('PF4WP_APC') && PF4WP_APC === true) {
                 $success = apc_store($this->int_key, $this->storage, $this->max_age);
             } else {
                 $success = wp_cache_set($this->wp_key, $this->storage, $this->group, $this->max_age);
