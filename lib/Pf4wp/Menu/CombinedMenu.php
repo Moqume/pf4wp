@@ -77,7 +77,7 @@ class CombinedMenu extends StandardMenu
              * parent as the active menu. But the cached value will NOT be
              * set at this point.
              */
-            if (!array_key_exists($active_submenu, $this->menus))
+            if (!empty($active_submenu) && !array_key_exists($active_submenu, $this->menus))
                 return $this->menus[$this->parent];
 
             foreach ($this->menus as $menu) {
@@ -206,7 +206,6 @@ class CombinedMenu extends StandardMenu
 
                 if (!$sub_as_nav && $menu->sub_as_nav && $is_top_sub)
                     $sub_as_nav = true; // Once set, keep it set
-                // @TODO: Make sure sub_as_nav only gets set for the top level
 
                 $is_active = ($active_menu == $menu);
                 $title     = ($menu->count !== false) ? sprintf('%s <span class="count">(%d)</span>', $title, $menu->count) : $title;

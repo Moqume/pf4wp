@@ -96,10 +96,15 @@ class MenuEntry
     /** The label of the 'per page' items */
     public $per_page_label = '';
 
-    /** If ths menu entry has sub-headers, render them as a navigation tabs if set
+    /** If this menu entry has sub-headers, render them as a navigation tabs if set
      * @since 1.0.16
      */
     public $sub_as_nav = false;
+
+    /** If set, display the page title (default)
+     * @since 1.0.16
+     */
+    public $display_page_title = true;
 
     /**
      * Constructor
@@ -359,7 +364,8 @@ class MenuEntry
         printf('<div class="icon32" %s><br /></div>', (isset($icon)) ? $icon : 'id="icon-options-general"');
 
         // Render title
-        printf('<h2>%s%s</h2>', $this->page_title, $this->page_title_extra);
+        if ($this->display_page_title)
+            printf('<h2>%s%s</h2>', $this->page_title, $this->page_title_extra);
 
         // Render output of before_callback
         echo $before_callback_output;
