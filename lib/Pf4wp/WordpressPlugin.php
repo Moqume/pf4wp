@@ -682,7 +682,6 @@ class WordpressPlugin
     {
         global $wp_version, $wpdb, $wp_object_cache;
 
-        $active_plugins  = array();
         $mem_peak        = (function_exists('memory_get_peak_usage')) ? memory_get_peak_usage() / 1048576 : 0;
         $mem_usage       = (function_exists('memory_get_usage')) ? memory_get_usage() / 1048576 : 0;
         $mem_max         = (int) @ini_get('memory_limit');
@@ -691,7 +690,6 @@ class WordpressPlugin
         $upload_max_post = (int) @ini_get('post_max_size');
         $upload_max_wp   = (function_exists('wp_max_upload_size')) ? wp_max_upload_size() / 1048576 : 0;
         $current_theme   = (function_exists('wp_get_theme')) ? wp_get_theme() : get_current_theme(); // WP 3.4
-        $php_extensions  = get_loaded_extensions();
 
         // Determine Object Cache
         $obj_cache_class      = get_class($wp_object_cache);
@@ -709,11 +707,13 @@ class WordpressPlugin
         }
 
         // Sort PHP extensions alphabetically
+        $php_extensions = get_loaded_extensions();
         usort($php_extensions, 'strcasecmp');
 
         // Fill active plugins array
+        $active_plugins  = array();
         foreach (\Pf4wp\Info\PluginInfo::getInfo(true) as $plugin)
-            $active_plugins[] = sprintf("'%s' by %s version %s", $plugin['Name'], $plugin['Author'], $plugin['Version']);
+            $active_plugins[] = sprintf("'%s' by %s, version %s", $plugin['Name'], $plugin['Author'], $plugin['Version']);
 
         $result = array(
             'Generated On'              => gmdate('D, d M Y H:i:s') . ' GMT',
@@ -723,12 +723,12 @@ class WordpressPlugin
             'Memory'                    => null,
             'Memory Usage'              => sprintf('%.2f Mbytes peak, %.2f Mbytes current', $mem_peak, $mem_usage),
             'Memory Limits'             => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes', $mem_max_wp, $mem_max),
-            'Maximum Upload Limits'     => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes filesize (%d Mbytes POST size)', $upload_max_wp, $upload_max, $upload_max_post),
+            'Upload Limits'             => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes filesize (%d Mbytes POST size)', $upload_max_wp, $upload_max, $upload_max_post),
 
             /* WordPress */
             'WordPress'                 => null,
             'WordPress Version'         => $wp_version,
-            'Active Wordpress Plugins'  => implode(', ', $active_plugins),
+            'Active Wordpress Plugins'  => implode('; ', $active_plugins),
             'Active WordPress Theme'    => $current_theme,
             'Locale'                    => sprintf('%s (%s)', get_locale(), ($this->locale_loaded) ? 'Loaded' : 'Not Loaded'),
             'Debug Mode'                => (defined('WP_DEBUG') && WP_DEBUG) ? 'Yes' : 'No',
