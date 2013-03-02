@@ -82,6 +82,7 @@ class WordpressPlugin
         'version'               => '0.0',           // The version of the plugin, to track upgrade events
         'delayed_notices'       => array(),         // Array containing notices that aren't displayed until possible to show them
         'registered_uninstall'  => false,           // Flag to indicate a registration hook has been registered - @since 1.0.14
+        'remote_js_console'     => false,           // Indicates if remote JS console is disabled, or the UUID if enabled
     );
 
     /**
@@ -364,6 +365,10 @@ class WordpressPlugin
                 $this->template = new $template_engine($views_dir, $options);
             }
         }
+
+        // Set JS console define, if ours
+        if (!defined('PF4WP_JS_CONSOLE') && $this->internal_options->remote_js_console)
+            define('PF4WP_JS_CONSOLE', $this->internal_options->remote_js_console);
 
         if (!Helpers::doingAjax() && is_admin()) {
             // Internal and Admin events
@@ -748,12 +753,105 @@ class WordpressPlugin
             'pf4wp Version'             => PF4WP_VERSION,
             'pf4wp APC Enabled'         => (defined('PF4WP_APC') && PF4WP_APC === true) ? 'Yes' : 'No',
             'Template Cache Directory'  => is_writable($this->getPluginDir() . static::VIEWS_CACHE_DIR) ? 'Writeable' : 'Not Writeable',
+            'Remote JS console'         => ($uuid = $this->getRemoteJSConsole()) ? sprintf('Enabled - UUID %s (%s by this plugin)', $uuid, ($this->isRemoteJSConsoleOwned() ? 'Owned' : 'Not owned')) : 'Disabled',
         );
 
         if (is_callable(array($this->template, 'getVersion')) && is_callable(array($this->template, 'getEngineName')))
             $result['Template Engine Version'] = $this->template->getEngineName()  . ' ' . $this->template->getVersion();
 
         return $result;
+    }
+
+    /**
+     * Enables or disables remote JS console
+     *
+     * Read more at http://jsconsole.com/remote-debugging.html
+     *
+     * @since 1.0.18
+     * @param bool $enable If set to true, the remote JS console will be enabled, otherwise disabled.
+     * @return mixed Returns the UUID if enabled, true if disabled or false if unable to enable (non-owner)
+     * @api
+     */
+    public function setRemoteJSConsole($enable)
+    {
+        $uuid = $this->getRemoteJSConsole();
+
+        // Check if we own it if enabled
+        if ($uuid && !$this->isRemoteJSConsoleOwned()) {
+            // Already enabled, but not owned by us
+            return false;
+        }
+
+        // Enable it
+        if ($enable === true) {
+            // If not already enabled, do it now
+            if (!$uuid) {
+                $uuid = $this->internal_options->remote_js_console = Helpers::UUID();
+                if (!defined('PF4WP_JS_CONSOLE'))
+                    define('PF4WP_JS_CONSOLE', $uuid);
+            }
+
+            return $uuid;
+        }
+
+        // Disable it
+        return (($this->internal_options->remote_js_console = false) === false);
+
+    }
+
+    /**
+     * Returns if the remote JS console is enabled
+     *
+     * @since 1.0.18
+     * @return mixed Returns the UUID if enabled, or false if disabled
+     * @api
+     */
+    public function getRemoteJSConsole()
+    {
+        return (defined('PF4WP_JS_CONSOLE')) ? PF4WP_JS_CONSOLE : $this->internal_options->remote_js_console;
+    }
+
+    /**
+     * Returns if the remote JS console is owned by this plugin
+     *
+     * @since 1.0.18
+     * @return bool
+     * @api
+     */
+    public function isRemoteJSConsoleOwned()
+    {
+        return (defined('PF4WP_JS_CONSOLE') && PF4WP_JS_CONSOLE === $this->internal_options->remote_js_console);
+    }
+
+    /**
+     * Returns the URL to start a JS console session
+     *
+     * @since 1.0.18
+     * @param mixed $html If a string is provided, then this function returns a HTML link with the specified text.
+     *   If set to true, the UUID will be used as the link text.
+     * @return mixed The URL for the session, or false if not enabled
+     * @api
+     */
+    public function getRemoteJSConsoleURL($html = null)
+    {
+        $uuid = $this->getRemoteJSConsole();
+
+        if (!$uuid)
+            return false;
+
+        $link = sprintf('http://jsconsole.com/?%%3Alisten%%20%s', $uuid);
+
+        // Return as HTML
+        if (!is_null($html)) {
+            if (!is_string($html))
+                $html = $this->internal_options->remote_js_console;
+
+            return sprintf("<a href=\"%s\" target=\"_blank\">%s</a>", $link, $html);
+        }
+
+        // Return just the link
+        return $link;
+
     }
 
     /*---------- Private Helpers (callbacks have a public scope!) ----------*/
@@ -808,6 +906,34 @@ class WordpressPlugin
         }
 
         printf("<script type=\"text/javascript\">/* <![CDATA[ */var %s_ajax=%s;/* ]]> */</script>\n", strtr($this->name, '-', '_'), json_encode($vars));
+    }
+
+    /**
+     * Inserts remote JS console script if enabled
+     *
+     * Note: For security reasons, this will only be inserted if a WordPress user
+     * with administration rights is logged in.
+     *
+     * @internal
+     */
+    private function insertJSConsole()
+    {
+        // Check if the script has already been inserted
+        if (defined('PF4WP_JS_CONSOLE_INSERTED'))
+            return;
+
+        if ($uuid = $this->getRemoteJSConsole()) {
+            // Check if a WordPress user is logged in and has admin rights
+            if (current_user_can('manage_options')) {
+                printf("<script src=\"http://jsconsole.com/remote.js?%s\"></script>\n", $uuid);
+            } else {
+                echo "<!-- Warning: Remote JS Console enabled, but current user does not have sufficient privileges. -->\n";
+
+            }
+
+            // Ensure that this is only inserted once
+            define('PF4WP_JS_CONSOLE_INSERTED', true);
+        }
     }
 
     /**
@@ -1110,8 +1236,13 @@ class WordpressPlugin
         if (!is_admin())
             return;
 
+        // Insert AJAX variables
         $this->insertAjaxVars();
 
+        // Insert remote JS console, if enabled
+        $this->insertJSConsole();
+
+        // Add user-defined Admin JS
         $this->onAdminScripts();
     }
 
@@ -1199,9 +1330,14 @@ class WordpressPlugin
     {
         if ($this->wasCalled('_onPublicScripts')) return; // Can only be called once!
 
+        // Insert AJAX variables, if enabled on public side
         if ($this->public_ajax)
             $this->insertAjaxVars();
 
+        // Insert remote JS console, if enabled
+        $this->insertJSConsole();
+
+        // Add user-defined public JS scripts
         $this->onPublicScripts();
     }
 
