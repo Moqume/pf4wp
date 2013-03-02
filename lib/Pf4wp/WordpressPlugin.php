@@ -746,6 +746,7 @@ class WordpressPlugin
             'Browser'                   => $_SERVER['HTTP_USER_AGENT'],
             'Server Software'           => $_SERVER['SERVER_SOFTWARE'],
             'Server OS'                 => php_uname(),
+            'Server Load'               => (function_exists('sys_getloadavg')) ? @implode(', ', sys_getloadavg()) : 'Unavailable',
             'Database Version'          => $wpdb->get_var('SELECT VERSION()'),
 
             /* pf4wp */
