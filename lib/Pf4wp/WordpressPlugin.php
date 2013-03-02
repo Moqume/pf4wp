@@ -914,6 +914,7 @@ class WordpressPlugin
      * Note: For security reasons, this will only be inserted if a WordPress user
      * with administration rights is logged in.
      *
+     * @since 1.0.18
      * @internal
      */
     private function insertJSConsole()
@@ -926,13 +927,34 @@ class WordpressPlugin
             // Check if a WordPress user is logged in and has admin rights
             if (current_user_can('manage_options')) {
                 printf("<script src=\"http://jsconsole.com/remote.js?%s\"></script>\n", $uuid);
+
+                define('PF4WP_JS_CONSOLE_INSERTED', true);
             } else {
                 echo "<!-- Warning: Remote JS Console enabled, but current user does not have sufficient privileges. -->\n";
 
+                define('PF4WP_JS_CONSOLE_INSERTED', false);
             }
+        }
+    }
 
-            // Ensure that this is only inserted once
-            define('PF4WP_JS_CONSOLE_INSERTED', true);
+    /**
+     * Inserts a Javascript variable to indicate if logging should be enabled
+     *
+     * @since 1.0.18
+     * @internal
+     */
+    private function insertJSLogFlag()
+    {
+        if (defined('PF4WP_JS_LOG_FLAG'))
+            return;
+
+        if ((defined('PF4WP_JS_CONSOLE_INSERTED') && PF4WP_JS_CONSOLE_INSERTED) ||
+            (defined('WP_DEBUG') && WP_DEBUG)) {
+
+            echo "<script type=\"text/javascript\">/* <![CDATA[ */window.pf4wp_log=true;/* ]]> */</script>\n";
+
+            // Set flag to ensure its only written once
+            define('PF4WP_JS_LOG_FLAG', true);
         }
     }
 
@@ -1242,6 +1264,9 @@ class WordpressPlugin
         // Insert remote JS console, if enabled
         $this->insertJSConsole();
 
+        // Insert the JS Log Flag, if enabled
+        $this->insertJSLogFlag();
+
         // Add user-defined Admin JS
         $this->onAdminScripts();
     }
@@ -1336,6 +1361,9 @@ class WordpressPlugin
 
         // Insert remote JS console, if enabled
         $this->insertJSConsole();
+
+        // Insert the JS Log Flag, if enabled
+        $this->insertJSLogFlag();
 
         // Add user-defined public JS scripts
         $this->onPublicScripts();
