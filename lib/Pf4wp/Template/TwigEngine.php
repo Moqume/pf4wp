@@ -41,7 +41,7 @@ class TwigEngine implements EngineInterface
      */
     public function __construct($template_path, array $options)
     {
-        if (class_exists('\Twig_Autoloader')) {
+        if (class_exists('\\Twig_Autoloader')) {
             \Twig_Autoloader::register();
 
             $this->options = $options;

@@ -99,7 +99,7 @@ if (($_pf4wp_old_php = version_compare(PHP_VERSION, $_pf4wp_version_check_php, '
 
 /* UCL */
 
-$_pf4wp_ucl_class = 'Symfony\\Component\\ClassLoader\\UniversalClassLoader';
+$_pf4wp_ucl_class = '\\Symfony\\Component\\ClassLoader\\UniversalClassLoader';
 
 if (!class_exists($_pf4wp_ucl_class))
     require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/UniversalClassLoader.php'; // Always include default UCL
@@ -110,7 +110,7 @@ if ((defined('PF4WP_APC') && PF4WPC === true) || extension_loaded('apc')) {
         define('PF4WP_APC', true);
 
     // Use the APC UCL instead
-    $_pf4wp_ucl_class = 'Symfony\\Component\\ClassLoader\\ApcUniversalClassLoader';
+    $_pf4wp_ucl_class = '\\Symfony\\Component\\ClassLoader\\ApcUniversalClassLoader';
 
     // Load the class, if not yet loaded
     if (!class_exists($_pf4wp_ucl_class))

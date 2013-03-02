@@ -345,7 +345,7 @@ class WordpressPlugin
 
         if ($use_template_engine) {
             if (class_exists($this->template_engine)) {
-                $rc = new \ ReflectionClass($this->template_engine);
+                $rc = new \ReflectionClass($this->template_engine);
                 if ($rc->implementsInterface('Pf4wp\Template\EngineInterface'))
                     $template_engine = $this->template_engine;
             }
