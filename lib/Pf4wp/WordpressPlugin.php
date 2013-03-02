@@ -752,8 +752,8 @@ class WordpressPlugin
             'pf4wp'                     => null,
             'pf4wp Version'             => PF4WP_VERSION,
             'pf4wp APC Enabled'         => (defined('PF4WP_APC') && PF4WP_APC === true) ? 'Yes' : 'No',
+            'Remote JS Console Enabled' => ($uuid = $this->getRemoteJSConsole()) ? sprintf('Yes - UUID %s (%s by this plugin)', $uuid, ($this->isRemoteJSConsoleOwned() ? 'Owned' : 'Not owned')) : 'No',
             'Template Cache Directory'  => is_writable($this->getPluginDir() . static::VIEWS_CACHE_DIR) ? 'Writeable' : 'Not Writeable',
-            'Remote JS console'         => ($uuid = $this->getRemoteJSConsole()) ? sprintf('Enabled - UUID %s (%s by this plugin)', $uuid, ($this->isRemoteJSConsoleOwned() ? 'Owned' : 'Not owned')) : 'Disabled',
         );
 
         if (is_callable(array($this->template, 'getVersion')) && is_callable(array($this->template, 'getEngineName')))
