@@ -387,6 +387,7 @@ class StandardMenu
 
             $per_page_id = $active_menu->_properties['slug'] . $current_screen->id . MenuEntry::PER_PAGE_SUFFIX;
 
+            // Check if the user has specified custom screen options
             if (isset($_POST['screen-options-apply']) &&
                 isset($_POST['wp_screen_options']['value']) &&
                 isset($_POST['wp_screen_options']['option']) && $_POST['wp_screen_options']['option'] == $per_page_id &&
@@ -397,7 +398,7 @@ class StandardMenu
                 $value = (int)$_POST['wp_screen_options']['value'];
 
                 // Let's be reasonable
-                if ($value < 1 || $value > 100)
+                if ($value < 1)
                     $value = (int)$active_menu->per_page;
 
                 update_user_option($current_user->ID, $per_page_id, $value);

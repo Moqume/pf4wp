@@ -688,11 +688,10 @@ class WordpressPlugin
         $current_theme   = (function_exists('wp_get_theme')) ? wp_get_theme() : get_current_theme(); // WP 3.4
         $php_extensions  = get_loaded_extensions();
 
-
         // Determine Object Cache
         $obj_cache_class      = get_class($wp_object_cache);
         $obj_cache_class_vars = get_class_vars($obj_cache_class);
-        $obj_cache            = 'Unknown (' . $obj_cache_class .')';
+        $obj_cache            = sprintf('Unknown (%s)', $obj_cache_class);
 
         if ($obj_cache_class == 'APC_Object_Cache') {
             $obj_cache = 'APC Object Cache';
@@ -719,7 +718,7 @@ class WordpressPlugin
             'Memory'                    => null,
             'Memory Usage'              => sprintf('%.2f Mbytes peak, %.2f Mbytes current', $mem_peak, $mem_usage),
             'Memory Limits'             => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes', $mem_max_wp, $mem_max),
-            'Maximum Upload Sizes'      => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes filesize, %d Mbytes POST size', $upload_max_wp, $upload_max, $upload_max_post),
+            'Maximum Upload Limits'     => sprintf('WordPress: %d Mbytes - PHP: %d Mbytes filesize (%d Mbytes POST size)', $upload_max_wp, $upload_max, $upload_max_post),
 
             /* WordPress */
             'WordPress'                 => null,
@@ -729,6 +728,8 @@ class WordpressPlugin
             'Locale'                    => sprintf('%s (%s)', get_locale(), ($this->locale_loaded) ? 'Loaded' : 'Not Loaded'),
             'Debug Mode'                => (defined('WP_DEBUG') && WP_DEBUG) ? 'Yes' : 'No',
             'Object Cache'              => $obj_cache,
+            'Home URL'                  => home_url(),
+            'Site URL'                  => site_url(),
 
             /* PHP */
             'PHP'                       => null,
@@ -745,7 +746,7 @@ class WordpressPlugin
             /* pf4wp */
             'pf4wp'                     => null,
             'pf4wp Version'             => PF4WP_VERSION,
-            'pf4wp APC Enabled'         => (PF4WP_APC) ? 'Yes' : 'No',
+            'pf4wp APC Enabled'         => (defined('PF4WP_APC') && PF4WP_APC === true) ? 'Yes' : 'No',
             'Template Cache Directory'  => is_writable($this->getPluginDir() . static::VIEWS_CACHE_DIR) ? 'Writeable' : 'Not Writeable',
         );
 
@@ -794,16 +795,19 @@ class WordpressPlugin
      */
     private function insertAjaxVars()
     {
-        $vars = sprintf(
-            'var %s_ajax = {"url":"%s","action":"%s","nonce":"%s","nonceresponse":"%s"};',
-            strtr($this->name, '-', '_'),
-            admin_url('admin-ajax.php'),
-            $this->name,
-            wp_create_nonce($this->name . '-ajax-call'),
-            wp_create_nonce($this->name . '-ajax-response')
+        // Standard vars
+        $vars = array(
+            'url'    => admin_url('admin-ajax.php'),
+            'action' => $this->name,
         );
 
-        echo '<script type="text/javascript">' . PHP_EOL . '/* <![CDATA[ */' . PHP_EOL . $vars . PHP_EOL . '/* ]]> */' . PHP_EOL . '</script>' . PHP_EOL;
+        // nonce vars
+        if (is_admin() || $this->verify_public_ajax) {
+            $vars['nonce']         = wp_create_nonce($this->name . '-ajax-call');
+            $vars['nonceresponse'] = wp_create_nonce($this->name . '-ajax-response');
+        }
+
+        printf("<script type=\"text/javascript\">/* <![CDATA[ */var %s_ajax=%s;/* ]]> */</script>\n", strtr($this->name, '-', '_'), json_encode($vars));
     }
 
     /**

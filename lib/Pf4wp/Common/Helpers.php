@@ -222,6 +222,12 @@ class Helpers
     );
 
     /**
+     * Used in UUID() function
+     * @internal
+     */
+    private static $uuid = '';
+
+    /**
      * Check if we are currently in a Network Admin mode (Multisite)
      *
      * @return bool Returns `true` if we are currently in Network Admin mode, `false` otherwise.
@@ -499,5 +505,46 @@ class Helpers
     public static function doingAjax()
     {
         return (defined('DOING_AJAX') && DOING_AJAX);
+    }
+
+    /**
+     * Generates a UUID
+     *
+     * @return string
+     * @since 1.0.17
+     * @api
+     */
+    public static function UUID()
+    {
+        // Windows COM extension
+        if (function_exists('com_create_guid') === true) {
+            return trim(com_create_guid(), '{}');
+        }
+
+        /* PECL UUID extension - 1000 cycles: 36.863089 ms
+         *
+         * Note: OSSP extension under the same module name is not
+         * supported due to deprecated reference passing
+         */
+        if (extension_loaded('uuid') && defined('UUID_TYPE_RANDOM')) {
+            // PECL UUID extension
+            return strtoupper(uuid_create(UUID_TYPE_RANDOM));
+        }
+
+        // Generic - 1000 cycles: 49.832106 ms
+        if (empty(self::$uuid))
+            self::$uuid = wp_salt(); // Seed it first
+
+        $hash = sha1(uniqid(null, true) . self::$uuid);
+
+        self::$uuid = strtoupper(sprintf('%08s-%04s-%04x-%04x-%12s',
+            substr($hash,  0,  8),
+            substr($hash,  8,  4),
+            (hexdec(substr($hash,  12,  4)) & 0x0fff) | 0x4000, // Version 4
+            (hexdec(substr($hash,  16,  4)) & 0x3fff) | 0x8000,
+            substr($hash, 20, 12)
+        ));
+
+        return self::$uuid;
     }
 }
