@@ -215,13 +215,23 @@ class StoragePath
             }
         }
 
-        $path  = trailingslashit($path);
-        $index = $path . 'index.html';
+        $path = trailingslashit($path);
+        $htaccess = $path . '.htaccess';
+        $index    = $path . 'index.html';
 
-         // Create a blank index
+         // Create a blank index, in case .htaccess is not supported
         if (!@is_file($index)) {
             @touch($index);
             @chmod($index, self::FILE_CHMOD);
+        }
+
+        // Create a .htaccess
+        if (!@is_file($htaccess)) {
+            if ($fp = @fopen($htaccess, 'w')) {
+                @fwrite($fp, "<IfModule mod_authz_host.c>\n\tOrder allow,deny\n\tDeny from all\n</IfModule>\n");
+                @fclose($fp);
+                @chmod($htaccess, self::FILE_CHMOD);
+            }
         }
     }
 
