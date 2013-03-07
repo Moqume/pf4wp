@@ -228,7 +228,7 @@ class StoragePath
         // Create a .htaccess
         if (!@is_file($htaccess)) {
             if ($fp = @fopen($htaccess, 'w')) {
-                @fwrite($fp, "<IfModule mod_authz_host.c>\n\tOrder allow,deny\n\tDeny from all\n</IfModule>\n");
+                @fwrite($fp, "Order allow,deny\nDeny from all\n");
                 @fclose($fp);
                 @chmod($htaccess, self::FILE_CHMOD);
             }
