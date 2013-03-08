@@ -1472,9 +1472,10 @@ class WordpressPlugin
         @file_put_contents(
             $this->getErrorLogFile(),
             sprintf(
-                "%s - %s - \"%s\" %d \"%s\"\n",
+                "%s - %s %d \"%s\" %d \"%s\"\n",
                 date('c'),
                 get_class($exception),
+                $count,
                 $exception->getFile(),
                 $exception->getLine(),
                 $exception->getMessage()
@@ -1608,6 +1609,8 @@ class WordpressPlugin
                     return;
                 }
                 break;
+
+            // Any other errors are ignored
         }
     }
 
