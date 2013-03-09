@@ -236,7 +236,11 @@ class WordpressPlugin
      */
     public function __destruct()
     {
+        // Restore the 2nd stage exception handler
         restore_exception_handler();
+
+        // Remove ourselves from the loaded instances
+        unset(self::$instances[get_class($this)]);
     }
 
     /*---------- Helpers ----------*/
@@ -1505,6 +1509,10 @@ class WordpressPlugin
     {
         $error          = error_get_last();
         $pf4wp_instance = null;
+
+        // Check if we have an error
+        if (!is_array($error) || !array_key_exists('file', $error))
+            return;
 
         // Obtain the true plugin base, if possible. Note: plugin_basename() already normalizes slashes
         list($plugin_base_dir) = explode('/', plugin_basename($error['file']));

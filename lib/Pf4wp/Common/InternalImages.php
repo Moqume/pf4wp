@@ -49,9 +49,10 @@ class InternalImages
     /**
      * Callback used by loadImages()
      *
+     * @param SplFileInfo $file File info object passed by recurseCallback() in loadImages()
      * @internal
      */
-    public static function _doLoadImages($file)
+    final public static function _doLoadImages($file)
     {
         // Check if the filename is a valid image
         if (!isset($file) || !file_is_valid_image($file))
