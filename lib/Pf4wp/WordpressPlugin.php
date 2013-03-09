@@ -43,6 +43,13 @@ class WordpressPlugin
     const VIEWS_DIR        = 'resources/views/';
     const VIEWS_CACHE_DIR  = 'store/cache/views/';
 
+    // Available log levels
+    const LOG_DISABLED = 0;
+    const LOG_ERROR    = 1;
+    const LOG_WARNING  = 2;
+    const LOG_DEBUG    = 3;
+    const LOG_PROFILE  = 4;
+
     /** Instance container
      * @internal
      */
@@ -164,6 +171,16 @@ class WordpressPlugin
      * @api
      */
     protected $locale_loaded = false;
+
+    /**
+     * Default log level
+     *
+     * If set to zero, no log messages will be recorded (not recommended)
+     *
+     * @since 1.1
+     * @api
+     */
+    public $log_level = self::LOG_ERROR;
 
     /**
      * Constructor (Protected; use instance())
@@ -458,7 +475,7 @@ class WordpressPlugin
      * @return string Plugin working name
      * @api
      */
-    public function getName()
+    final public function getName()
     {
         return $this->name;
     }
@@ -469,7 +486,7 @@ class WordpressPlugin
      * @return string Plugin directory (always with trailing slash)
      * @api
      */
-    public function getPluginDir()
+    final public function getPluginDir()
     {
         return trailingslashit(dirname($this->plugin_file));
     }
@@ -480,7 +497,7 @@ class WordpressPlugin
      * @return string Plugin base name
      * @api
      */
-    public function getPluginBaseName()
+    final public function getPluginBaseName()
     {
         return plugin_basename($this->plugin_file);
     }
@@ -492,7 +509,7 @@ class WordpressPlugin
      * @return string Plugin URL
      * @api
      */
-    public function getPluginUrl($full = false)
+    final public function getPluginUrl($full = false)
     {
         if ($full)
             return WP_PLUGIN_URL . '/' . plugin_basename($this->plugin_file);
@@ -569,15 +586,95 @@ class WordpressPlugin
     }
 
     /**
-     * Returns the location of the error log file
+     * Sets the log level
      *
-     * @return string
-     * @since 1.0
+     * A level of LOG_DISABLED (0) disables logging. It is recommended to
+     * have the minimum set at LOG_ERROR (1), so to record fatal errors and
+     * uncaught exceptions.
+     *
+     * It is permissible to set $log_level directly
+     *
+     * @param int $level The new log level
+     * @return int The previous log level
+     * @since 1.1
      * @api
      */
-    public function getErrorLogFile()
+    public function setLogLevel($level)
     {
-        return $this->getPluginDir() . 'error.log';
+        $previous = $this->log_level;
+
+        $this->log_level = ($level < self::LOG_DISABLED) ? self::LOG_DISABLED : $level;
+
+        return $previous;
+    }
+
+    /**
+     * Returns the current log level
+     *
+     * Note: It is permissible to set $log_level directly
+     *
+     * @return int
+     * @since 1.1
+     * @api
+     */
+    public function getLogLevel()
+    {
+        return $this->log_level;
+    }
+
+    /**
+     * Returns the location of the log file
+     *
+     * @return string
+     * @since 1.1
+     * @api
+     */
+    public function getLogFile()
+    {
+        $fn = preg_replace('#[^\w\s\d\-_~,;:\[\]\(\]]|[\.]{2,}#', '', $this->getName());
+
+        return $this->getPluginDir() . $fn . '.log';
+    }
+
+    /**
+     * Logs an entry, depending on the log level
+     *
+     * @param string $entry The log entry to record
+     * @param int $level The log level of the entry (LOG_ERROR by default)
+     * @return int Returns 1 if the entry was logged successfully, 0 if unsuccessful or -1 if log level is higher than specified log level
+     * @since 1.1
+     * @api
+     */
+    final public function log($entry, $level = self::LOG_ERROR)
+    {
+        // Do not log this entry if the level is higher than the specified log level
+        if ($level > $this->log_level)
+            return -1;
+
+        // Set a marker, so we know what type of log level/entry this is
+        switch ($level) {
+            case self::LOG_ERROR:   $log_marker = 'E'; break;
+            case self::LOG_WARNING: $log_marker = 'W'; break;
+            case self::LOG_DEBUG:   $log_marker = 'D'; break;
+            case self::LOG_PROFILE: $log_marker = 'P'; break;
+            default:                $log_marker = '-'; break;
+        }
+
+        // Log it
+        $result = (@file_put_contents(
+            $this->getLogFile(),
+            sprintf(
+                "%s %s \"%s v%s\" %s\n",
+                date(c),
+                $log_marker,
+                addslashes($this->getDisplayName()),
+                $this->getVersion(),
+                $entry
+            ),
+            FILE_APPEND
+        ) > 0);
+
+        return ($result) ? 1 : 0;
     }
 
     /**
@@ -1428,6 +1525,7 @@ class WordpressPlugin
     /**
      * Handles a Stage 2 exception
      *
+     * @filter pf4wp_error_contactmsg_[short plugin name]
      * @param \Exception $exception Exception object
      * @param int $count Count of Exception object
      * @internal
@@ -1477,24 +1575,41 @@ class WordpressPlugin
         echo $content;
 
         // Log to a file (@since 1.1)
-        @file_put_contents(
-            $this->getErrorLogFile(),
+        $error_logged = ($this->log(
             sprintf(
-                "%s - %s %d \"%s\" %d \"%s\"\n",
-                date('c'),
+                '%s %d "%s" %d "%s"',
                 get_class($exception),
                 $count,
                 $exception->getFile(),
                 $exception->getLine(),
-                $exception->getMessage()
+                addslashes($exception->getMessage())
             ),
-            FILE_APPEND
-        );
+            self::LOG_ERROR
+        ) === 1);
 
         if ($exception->getPrevious()) {
             $count++;
             $this->_onStage2Exception($exception->getPrevious(), $count);
         }
+
+        // Add a final message (@since 1.1)
+        echo apply_filters(
+            'pf4wp_error_contactmsg_' . $this->getName(),
+            sprintf(
+                '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
+                PluginInfo::getInfo(false, $this->getPluginBaseName(), 'AuthorURI'),
+                PluginInfo::getInfo(false, $this->getPluginBaseName(), 'Author'),
+                ($error_logged) ? ' or the logfile' : ''
+            ),
+            get_class($exception),
+            array(
+                'type'    => -1,
+                'file'    => $exception->getFile(),
+                'line'    => $exception->getLine(),
+                'message' => $exception->getMessage(),
+            ),
+            $error_logged
+        );
 
         die();
     }
@@ -1506,6 +1621,12 @@ class WordpressPlugin
      * providing the user with feedback as to what the error was. This avoids the
      * over-simplistic 500 errors normally generated (provided WP_DEBUG was set to false).
      *
+     * NOTE: This will only apply to pf4wp instances. This may de-activate a plugin, leaving
+     * only the current instance. The current instance will be referenced for certain functions,
+     * such as logging, but may fail depending on where the fatal error is located (thus creating
+     * a double fatal error) and so should not be relied upon - this is a best-effort feature.
+     *
+     * @filter pf4wp_error_contactmsg_[short plugin name]
      * @internal
      * @since 1.1
      */
@@ -1539,7 +1660,6 @@ class WordpressPlugin
         if (is_null($pf4wp_instance))
             return;
 
-        $error_file = $pf4wp_instance->getErrorLogFile();
         $error_type = '';
 
         // Handle error(s)
@@ -1554,21 +1674,19 @@ class WordpressPlugin
                 $error_logged_msg = '';
 
                 // Try logging the error to a file
-                $error_logged = (file_put_contents(
-                    $error_file,
+                $error_logged = ($pf4wp_instance->log(
                     sprintf(
-                        "%s - %s - \"%s\" %d \"%s\"\n",
-                        date('c'),
+                        '%s "%s" %d "%s"',
                         $error_type,
                         $error['file'],
                         $error['line'],
-                        $error['message']
+                        addslashes($error['message'])
                     ),
-                    FILE_APPEND
-                ) > 0);
+                    self::LOG_ERROR
+                ) === 1);
 
                 if ($error_logged)
-                    $error_logged_msg = sprintf(__('<p>A log of the error can be found in the file <code>%s</code></p>', $instance->getName()), $error_file);
+                    $error_logged_msg = sprintf(__('<p>A log of the error can be found in the file <code>%s</code></p>', $pf4wp_instance->getName()), $pf4wp_instance->getLogFile());
 
                 // If not in WP Debug mode, de-activate the plugin if possible
                 if (!defined('WP_DEBUG') || (defined('WP_DEBUG') && WP_DEBUG === false)) {
@@ -1578,12 +1696,26 @@ class WordpressPlugin
                     if (function_exists('deactivate_plugins')) {
                         deactivate_plugins($pf4wp_instance->getPluginBaseName(), true);
                         $deactivated = true;
-                        $deactivated_msg = __('<p>Because of this error, the plugin was automatically deactivated to prevent it from causing further problems with your WordPress site.</p>', $instance->getName());
+                        $deactivated_msg = __('<p>Because of this error, the plugin was automatically deactivated to prevent it from causing further problems with your WordPress site.</p>', $pf4wp_instance->getName());
                     }
                 }
 
+                // Display a full-fledged error in Admin
                 if (is_admin()) {
-                    // Display a full-fledged error in Admin
+                    // Allow the plugin to define a message on how to be contacted
+                    $contact_msg = apply_filters(
+                        'pf4wp_error_contactmsg_' . $pf4wp_instance->getName(),
+                        sprintf(
+                            '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
+                            PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'AuthorURI'),
+                            PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'Author'),
+                            ($error_logged) ? ' or the logfile' : ''
+                        ),
+                        $error_type,    // The error type name
+                        $error,         // Pass the error as well
+                        $error_logged   // And if the error was logged
+                    );
+
                     wp_die(
                         sprintf(
                             __(
@@ -1593,8 +1725,8 @@ class WordpressPlugin
                                 '<p><pre>%1$s: %s</pre></p>'.
                                 '%s'. // Deactivated
                                 '%s'. // Error Logged
-                                '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
-                                $instance->getName()
+                                '%s', // Contact Message
+                                $pf4wp_instance->getName()
                             ),
                             $error_type,
                             $pf4wp_instance->getDisplayName(),
@@ -1603,11 +1735,9 @@ class WordpressPlugin
                             $error['message'],
                             $deactivated_msg,
                             $error_logged_msg,
-                            PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'AuthorURI'),
-                            PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'Author'),
-                            ($error_logged) ? ' or the logfile' : ''
+                            $contact_msg
                         ),
-                        sprintf(__('Fatal Error (%s)', $instance->getName()), $error_type),
+                        sprintf(__('Fatal Error (%s)', $pf4wp_instance->getName()), $error_type),
                         array('back_link' => true)
                     );
                 } else {
@@ -1618,7 +1748,7 @@ class WordpressPlugin
                         printf(
                             "<head><script type=\"text/javascript\">/* <![CDATA[ */window.location.reload(true);/* ]]> */</script></head>\n".
                             "<body><noscript>".
-                            __("Please <a href=\"%s\">click here</a> to reload this page.", $instance->getName()).
+                            __("Please <a href=\"%s\">click here</a> to reload this page.", $pf4wp_instance->getName()).
                             "</noscript></body>",
                             $_SERVER['REQUEST_URI']
                         );
