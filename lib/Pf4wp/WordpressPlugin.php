@@ -1438,8 +1438,12 @@ class WordpressPlugin
 
         $content = '';
 
-        if ($count == 1)
-            $content .= '<div style="clear:both"></div><h1>' . InternalImages::getHTML('sys_error', 32, 'margin-right:8px;vertical-align:text-bottom') . __('Oops! Something went wrong', $this->name) . ':</h1>';
+        if ($count == 1) {
+            $image_pos  = 'position:relative;bottom:8px;';
+            $image_pos .=  (!is_rtl()) ? 'float:left;margin-right:8px;' : 'float:right;margin-left:8px;';
+
+            $content .= '<div style="clear:both"></div><h1>' . InternalImages::getHTML('sys_error', 32, $image_pos) . __('Oops! Something went wrong', $this->name) . ':</h1>';
+        }
 
         $content .= sprintf('<div class="postbox"><h2 style="border-bottom:1px solid #ddd;margin-bottom:10px;padding:5px;"><span>#%s</span> %s: %s</h2><ol>',
             $count,
@@ -1564,7 +1568,7 @@ class WordpressPlugin
                 ) > 0);
 
                 if ($error_logged)
-                    $error_logged_msg = sprintf('<p>A log of the error can be found in the file <code>%s</code></p>', $error_file);
+                    $error_logged_msg = sprintf(__('<p>A log of the error can be found in the file <code>%s</code></p>', $instance->getName()), $error_file);
 
                 // If not in WP Debug mode, de-activate the plugin if possible
                 if (!defined('WP_DEBUG') || (defined('WP_DEBUG') && WP_DEBUG === false)) {
@@ -1574,7 +1578,7 @@ class WordpressPlugin
                     if (function_exists('deactivate_plugins')) {
                         deactivate_plugins($pf4wp_instance->getPluginBaseName(), true);
                         $deactivated = true;
-                        $deactivated_msg = '<p>Because of this error, the plugin was automatically deactivated to prevent it from causing further problems with your WordPress site.</p>';
+                        $deactivated_msg = __('<p>Because of this error, the plugin was automatically deactivated to prevent it from causing further problems with your WordPress site.</p>', $instance->getName());
                     }
                 }
 
@@ -1582,13 +1586,16 @@ class WordpressPlugin
                     // Display a full-fledged error in Admin
                     wp_die(
                         sprintf(
-                            '<h1>Fatal Error (%s)</h1>'.
-                            '<p><strong>There was a fatal error in the plugin %s.</strong></p>'.
-                            '<p>The error occurred in file <code>%s</code> on line %d. The cause of the error was:</p>'.
-                            '<p><pre>%1$s: %s</pre></p>'.
-                            '%s'. // Deactivated
-                            '%s'. // Error Logged
-                            '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
+                            __(
+                                '<h1>Fatal Error (%s)</h1>'.
+                                '<p><strong>There was a fatal error in the plugin %s.</strong></p>'.
+                                '<p>The error occurred in file <code>%s</code> on line %d. The cause of the error was:</p>'.
+                                '<p><pre>%1$s: %s</pre></p>'.
+                                '%s'. // Deactivated
+                                '%s'. // Error Logged
+                                '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
+                                $instance->getName()
+                            ),
                             $error_type,
                             $pf4wp_instance->getDisplayName(),
                             $error['file'],
@@ -1600,8 +1607,8 @@ class WordpressPlugin
                             PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'Author'),
                             ($error_logged) ? ' or the logfile' : ''
                         ),
-                        sprintf('Fatal Error (%s)', $error_type),
-                        array('back_link'=>true)
+                        sprintf(__('Fatal Error (%s)', $instance->getName()), $error_type),
+                        array('back_link' => true)
                     );
                 } else {
                     /* If the plugin was deactivated, reload the page so the user does not stare at a
@@ -1610,7 +1617,9 @@ class WordpressPlugin
                     if ($deactivated) {
                         printf(
                             "<head><script type=\"text/javascript\">/* <![CDATA[ */window.location.reload(true);/* ]]> */</script></head>\n".
-                            "<body><noscript>Please <a href=\"%s\">click here</a> to reload this page.</noscript></body>",
+                            "<body><noscript>".
+                            __("Please <a href=\"%s\">click here</a> to reload this page.", $instance->getName()).
+                            "</noscript></body>",
                             $_SERVER['REQUEST_URI']
                         );
                     }
