@@ -1,4 +1,4 @@
 # Ignore auto-save/backup files
 *~
-/doc/html/
+/resources/doc/html/
 /bin/vendor/docblox/

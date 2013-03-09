@@ -6,12 +6,14 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
- 
+
 namespace Pf4wp\Dynamic;
 
 /**
  * Dynamic class base
  *
+ * @package Pf4wp
+ * @subpackage Dynamic
  * @since 1.0.6
  */
 abstract class DynamicBase implements DynamicInterface
@@ -19,7 +21,7 @@ abstract class DynamicBase implements DynamicInterface
     const
         DYN_NAME = 'Name',
         DYN_DESC = 'Description';
-    
+
     /**
      * Return whether this dynamic class is active
      *
@@ -30,7 +32,7 @@ abstract class DynamicBase implements DynamicInterface
     {
         return false;
     }
-    
+
     /**
      * Return details about the dynamic class
      *

@@ -21,46 +21,46 @@ $docblox_git = 'git://github.com/docblox/docblox.git';
  * @access private
  */
 $root_dir    = dirname(__DIR__);
-$doc_dir     = $root_dir . '/doc/html';
+$doc_dir     = $root_dir . '/resources/doc/html';
 $lib_dir     = $root_dir . '/lib';
 $docblox_dir = __DIR__ . '/vendor/docblox';
 /**#@-*/
 
 function rrmdir($dir)
-{ 
-    if (is_dir($dir)) { 
-        $objects = scandir($dir); 
-        
-        foreach ($objects as $object) { 
-            if ($object != "." && $object != "..") { 
+{
+    if (is_dir($dir)) {
+        $objects = scandir($dir);
+
+        foreach ($objects as $object) {
+            if ($object != "." && $object != "..") {
                 if (filetype($dir."/".$object) == "dir") {
-                    rrmdir($dir."/".$object); 
+                    rrmdir($dir."/".$object);
                 } else {
                     unlink($dir."/".$object);
                 }
-            } 
-        } 
-        
+            }
+        }
+
         reset($objects);
-        rmdir($dir); 
-    } 
+        rmdir($dir);
+    }
 }
 
 
 /* Obtain DocBlox from GIT if possible */
 if (!@is_file($docblox_dir . '/bin/docblox.php')) {
     $results = array();
-    
+
     echo "Retrieving DocBlox from $docblox_git... ";
     exec(sprintf('git clone %s %s 2>&1 && cd %2$s && git submodule init 2>&1 && git submodule update 2>&1', escapeshellarg($docblox_git), escapeshellarg($docblox_dir), escapeshellarg(__DIR__)), $results, $return);
-    
+
     if ($return !== 0) {
         echo "ERROR!\r\n\r\n";
         echo implode("\r\n", $results);
         echo "\r\n\r\n";
         exit(1);
     }
-    
+
     echo "Done!\r\n\r\n";
 }
 

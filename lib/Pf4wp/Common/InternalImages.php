@@ -37,7 +37,7 @@ class InternalImages
             return;
 
         // Get the vendor base dir
-        $images_dir = dirname(dirname(dirname(__FILE__))) . '/resources/images';
+        $images_dir = dirname(dirname(dirname(dirname(__FILE__)))) . '/resources/images';
 
         // Quick sanity check
         if (!is_dir($images_dir) || !is_readable($images_dir))

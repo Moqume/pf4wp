@@ -12,6 +12,8 @@ namespace Pf4wp\Dynamic;
 /**
  * Dynamic class interface
  *
+ * @package Pf4wp
+ * @subpackage Dynamic
  * @since 1.0.6
  */
 interface DynamicInterface
