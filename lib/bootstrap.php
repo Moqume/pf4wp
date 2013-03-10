@@ -104,7 +104,7 @@ $_pf4wp_ucl_class = '\\Symfony\\Component\\ClassLoader\\UniversalClassLoader';
 if (!class_exists($_pf4wp_ucl_class))
     require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/UniversalClassLoader.php'; // Always include default UCL
 
-if ((defined('PF4WP_APC') && PF4WPC === true) || extension_loaded('apc')) {
+if ((defined('PF4WP_APC') && PF4WP_APC === true) || extension_loaded('apc')) {
     // Set the PF4WP_APC to true, if not yet set
     if (!defined('PF4WP_APC'))
         define('PF4WP_APC', true);
