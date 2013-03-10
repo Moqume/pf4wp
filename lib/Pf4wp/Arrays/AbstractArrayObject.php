@@ -7,61 +7,41 @@
  * file that was distributed with this source code.
  */
 
-namespace Pf4wp\Common;
+namespace Pf4wp\Arrays;
 
 /**
- * Class providing a pf4wp wide (global) variable storage
+ * Abstract Array Object
  *
+ * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
- * @subpackage Globals
- * @api
+ * @subpackage Arrays
  * @since 1.1
  */
-class GlobalVars implements \ArrayAccess, \Countable, \Serializable, \IteratorAggregate
+abstract class AbstractArrayObject implements \ArrayAccess, \Countable, \Serializable, \IteratorAggregate
 {
-    static private $globals = array();
-
     /**
-     * Exports globals to an array
-     *
-     * @return array
-     * @api
-     */
-    public function getArrayCopy()
-    {
-        return self::$globals;
-    }
-
-    /**
-     * Serializes the globals
+     * Serializes the array
      *
      * @return string
      * @api
      */
-    public function serialize() {
-        return serialize(self::$globals);
-    }
+    abstract public function serialize();
 
     /**
-     * Unserializes a serialized string
+     * Unserializes a serialized array
      *
-     * @param string Serialized string
+     * @param string Serialized array
      * @api
      */
-    public function unserialize($serialized)
-    {
-        self::$globals = unserialize($serialized);
-    }
+    abstract public function unserialize($serialized);
 
     /**
-     * Provides an iterator for global array
+     * Provides an iterator for the array
      *
      * @return ArrayIterator
      * @api
      */
-    public function getIterator() {
-        return new \ArrayIterator(self::$globals);
-    }
+    abstract public function getIterator();
 
     /**
      * Provides the count of the array
@@ -69,38 +49,25 @@ class GlobalVars implements \ArrayAccess, \Countable, \Serializable, \IteratorAg
      * @return int
      * @api
      */
-    public function count()
-    {
-        return count(self::$globals);
-    }
+    abstract public function count();
 
     /**
-     * Sets an global value at the provided offset
+     * Sets an array value at the provided offset
      *
      * @param mixed $offset The offset at which to set the value
      * @param mixed $value The value to set
      * @api
      */
-    public function offsetSet($offset, $value)
-    {
-        if (is_null($offset)) {
-            self::$globals[] = $value;
-        } else {
-            self::$globals[$offset] = $value;
-        }
-    }
+    abstract public function offsetSet($offset, $value);
 
     /**
-     * Tests if the provided offset exists in the globals
+     * Tests if the provided offset exists in the array
      *
      * @param mixed $offset The offset to test
      * @return bool
      * @api
      */
-    public function offsetExists($offset)
-    {
-        return isset(self::$globals[$offset]);
-    }
+    abstract public function offsetExists($offset);
 
     /**
      * Clears the value and removes the specified offset in the array
@@ -108,10 +75,7 @@ class GlobalVars implements \ArrayAccess, \Countable, \Serializable, \IteratorAg
      * @param mixed $offset The offest to remove
      * @api
      */
-    public function offsetUnset($offset)
-    {
-        unset(self::$globals[$offset]);
-    }
+    abstract public function offsetUnset($offset);
 
     /**
      * Retrieves the value at the specified offset
@@ -120,10 +84,7 @@ class GlobalVars implements \ArrayAccess, \Countable, \Serializable, \IteratorAg
      * @return mixed
      * @api
      */
-    public function offsetGet($offset)
-    {
-        return isset(self::$globals[$offset]) ? self::$globals[$offset] : null;
-    }
+    abstract public function offsetGet($offset);
 
     /**
      * Magic for setting a value

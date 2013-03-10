@@ -7,7 +7,9 @@
  * file that was distributed with this source code.
  */
 
-namespace Pf4wp\Storage;
+namespace Pf4wp\Arrays;
+
+use Pf4wp\Arrays\AbstractArrayObject;
 
 /**
  * Class providing a Cached Array Object
@@ -17,54 +19,54 @@ namespace Pf4wp\Storage;
  *
  * @author Mike Green <myatus@gmail.com>
  * @package Pf4wp
- * @subpackage Storage
+ * @subpackage Arrays
  * @since 1.0.16
  * @api
  */
-class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \IteratorAggregate
+class CachedArrayObject extends AbstractArrayObject
 {
     const PERSIST_TEST_KEY = 'pf4wp_persist_test';
 
     /** Key and Group under which to store the cache
      * @internal
      */
-    private $key;
-    private $wp_key;
-    private $int_key;
-    private $group;
+    protected $key;
+    protected $wp_key;      // WP method
+    protected $int_key;     // Internal method
+    protected $group;
 
     /** The maximum age of a cached entry
      * @internal
      */
-    private $max_age = 0;
+    protected $max_age = 0;
 
     /** Simple local storage to work with the cache
      * @internal
      */
-    private $storage = array();
+    protected $storage = array();
 
     /** The maximum and current age of the local storage
      * @internal
      */
-    private $max_storage_age = 0;
-    private $storage_time = 0;
+    protected $max_storage_age = 0;
+    protected $storage_time = 0;
 
     /** Set if the local storage and cache are out of sync
      * @internal
      */
-    private $is_dirty = false;
+    protected $is_dirty = false;
 
     /** Set if the cache can persist
      * @see isPersistent()
      * @internal
      */
-    private $can_persist = false;
+    protected $can_persist = false;
 
     /**
      * Constructor
      *
      * Note that increasing the maximum age of the local storage will increase
-     * performance, but will also reduce cache coherence.
+     * performance, particularly write performance, but will also reduce cache coherence.
      *
      * @param string $key The storage key
      * @param string $group The storage group ('pf4wp' by default)
@@ -137,7 +139,7 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
      *
      * @internal
      */
-    private function generateKeys()
+    protected function generateKeys()
     {
         global $blog_id;
 
@@ -244,7 +246,7 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
      * @param bool $force Force fetching of the cache, without age checking
      * @internal
      */
-    private function fetchCache($force = false)
+    protected function fetchCache($force = false)
     {
         $time = microtime(true);
 
@@ -276,7 +278,7 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
      * @param bool $force Force setting the cache, without age checking
      * @internal
      */
-    private function setCache($force = false)
+    protected function setCache($force = false)
     {
         $this->is_dirty = true; // Mark cache as dirty
 
@@ -430,45 +432,5 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
         $this->fetchCache();
 
         return isset($this->storage[$offset]) ? $this->storage[$offset] : null;
-    }
-
-    /**
-     * Magic for setting a value
-     *
-     * @api
-     */
-    public function __set($offset, $value)
-    {
-        $this->offsetSet($offset, $value);
-    }
-
-    /**
-     * Magic for getting a value
-     *
-     * @api
-     */
-    public function __get($offset)
-    {
-        return $this->offsetGet($offset);
-    }
-
-    /**
-     * Magic for testing a value
-     *
-     * @api
-     */
-    public function __isset($offset)
-    {
-        return $this->offsetExists($offset);
-    }
-
-    /**
-     * Magic for unsetting a value
-     *
-     * @api
-     */
-    public function __unset($offset)
-    {
-        $this->offsetUnset($offset);
     }
 }

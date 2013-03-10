@@ -11,7 +11,7 @@ namespace Pf4wp;
 
 use Pf4wp\Common\Helpers;
 use Pf4wp\Common\InternalImages;
-use Pf4wp\Common\GlobalVars;
+use Pf4wp\Arrays\GlobalArrayObject;
 use Pf4wp\Info\PluginInfo;
 use Pf4wp\Storage\StoragePath;
 use Pf4wp\Notification\AdminNotice;
@@ -231,7 +231,7 @@ class WordpressPlugin
         }
 
         // Globals
-        $this->globals = new GlobalVars();
+        $this->globals = new GlobalArrayObject();
 
         // Register the shutdown function, if it hasn't been yet
         if (!self::$registered_shutdown) {
