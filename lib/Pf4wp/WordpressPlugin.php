@@ -11,6 +11,7 @@ namespace Pf4wp;
 
 use Pf4wp\Common\Helpers;
 use Pf4wp\Common\InternalImages;
+use Pf4wp\Common\GlobalVars;
 use Pf4wp\Info\PluginInfo;
 use Pf4wp\Storage\StoragePath;
 use Pf4wp\Notification\AdminNotice;
@@ -19,6 +20,7 @@ use Pf4wp\Menu\StandardMenu;
 use Pf4wp\Menu\MenuEntry;
 use Pf4wp\Widgets\Widget;
 use Pf4wp\Template\NullEngine;
+
 
 /**
  * WordpressPlugin (Pf4wp) provides a base framework to develop plugins for WordPress.
@@ -80,8 +82,23 @@ class WordpressPlugin
      */
     private $menu = false;
 
-    /** Holds data of already called functions, to prevent them being called again (if only allowed once) */
+    /** Holds data of already called functions, to prevent them being called again (if only allowed once)
+     * @internal
+     */
     private $was_called = array();
+
+    /** Holds any JS code to be printed between script tags
+     * @since 1.1
+     * @internal
+     */
+    private $js_code = array();
+
+    /**
+     * Holds private globals
+     * @since 1.1
+     * @internal
+     */
+    protected $globals;
 
     /** An object handling the internal options for the plugin
      * @internal
@@ -194,13 +211,6 @@ class WordpressPlugin
         if (empty($plugin_file))
             return;
 
-        // Register the shutdown function, if it hasn't been yet
-        if (!self::$registered_shutdown) {
-            register_shutdown_function(array($this, '_onShutdown'));
-
-            self::$registered_shutdown = true;
-        }
-
         $this->plugin_file = $plugin_file;
         $this->name = plugin_basename(dirname($plugin_file));
 
@@ -218,6 +228,16 @@ class WordpressPlugin
 
                 $a_first = false;
             }
+        }
+
+        // Globals
+        $this->globals = new GlobalVars();
+
+        // Register the shutdown function, if it hasn't been yet
+        if (!self::$registered_shutdown) {
+            register_shutdown_function(array($this, '_onShutdown'));
+
+            self::$registered_shutdown = true;
         }
 
         // Options handlers
@@ -890,6 +910,30 @@ class WordpressPlugin
     }
 
     /**
+     * Adds JS code to a queue to be printed within a single `<script>` tag
+     *
+     * @param string $js The Javascript, without any script tags
+     * @since 1.1
+     * @api
+     */
+    public function addJSQueue($js)
+    {
+        $this->js_code[] = $js;
+    }
+
+    /**
+     * Retrieves the current queue of JS code to be printed
+     *
+     * @return array Array containing the Javascript in the order it was added
+     * @since 1.1
+     * @api
+     */
+    public function getJSQueue()
+    {
+        return $this->js_code;
+    }
+
+    /**
      * Enables or disables remote JS console
      *
      * Read more at http://jsconsole.com/remote-debugging.html
@@ -1005,6 +1049,19 @@ class WordpressPlugin
     }
 
     /**
+     * Inserts (echoes) the JS queue, and then clears it
+     *
+     * @since 1.1
+     * @internal
+     */
+    protected function printJSQueue()
+    {
+        printf("<script type=\"text/javascript\">/* <![CDATA[ */%s/* ]]> */</script>\n", implode("", $this->js_code));
+
+        $this->js_code = array();
+    }
+
+    /**
      * Inserts (echoes) the AJAX variables
      *
      * Exposes a number of variables to JavaScript, required for WP Ajax functions. This
@@ -1018,7 +1075,7 @@ class WordpressPlugin
      *
      * @internal
      */
-    private function insertAjaxVars()
+    private function queueAjaxVars()
     {
         // Standard vars
         $vars = array(
@@ -1032,7 +1089,7 @@ class WordpressPlugin
             $vars['nonceresponse'] = wp_create_nonce($this->name . '-ajax-response');
         }
 
-        printf("<script type=\"text/javascript\">/* <![CDATA[ */var %s_ajax=%s;/* ]]> */</script>\n", strtr($this->name, '-', '_'), json_encode($vars));
+        $this->addJSQueue(sprintf("window.%s_ajax=%s;", strtr($this->name, '-', '_'), json_encode($vars)));
     }
 
     /**
@@ -1047,7 +1104,7 @@ class WordpressPlugin
     private function insertJSConsole()
     {
         // Check if the script has already been inserted
-        if (defined('PF4WP_JS_CONSOLE_INSERTED'))
+        if (isset($this->globals->pf4wp_js_console_inserted))
             return;
 
         if ($uuid = $this->getRemoteJSConsole()) {
@@ -1055,11 +1112,11 @@ class WordpressPlugin
             if (current_user_can('manage_options')) {
                 printf("<script src=\"http://jsconsole.com/remote.js?%s\"></script>\n", $uuid);
 
-                define('PF4WP_JS_CONSOLE_INSERTED', true);
+                $this->globals->pf4wp_js_console_inserted = true;
             } else {
                 echo "<!-- Warning: Remote JS Console enabled, but current user does not have sufficient privileges. -->\n";
 
-                define('PF4WP_JS_CONSOLE_INSERTED', false);
+                $this->globals->pf4wp_js_console_inserted = false;
             }
         }
     }
@@ -1070,18 +1127,18 @@ class WordpressPlugin
      * @since 1.0.18
      * @internal
      */
-    private function insertJSLogFlag()
+    private function queueJSLogFlag()
     {
-        if (defined('PF4WP_JS_LOG_FLAG'))
+        if (isset($this->globals->pf4wp_js_log_flag))
             return;
 
-        if ((defined('PF4WP_JS_CONSOLE_INSERTED') && PF4WP_JS_CONSOLE_INSERTED) ||
+        if ((isset($this->globals->pf4wp_js_console_inserted) && $this->globals->pf4wp_js_console_inserted) ||
             (defined('WP_DEBUG') && WP_DEBUG)) {
 
-            echo "<script type=\"text/javascript\">/* <![CDATA[ */window.pf4wp_log=true;/* ]]> */</script>\n";
+            $this->addJSQueue('window.pf4wp_log=true;');
 
             // Set flag to ensure its only written once
-            define('PF4WP_JS_LOG_FLAG', true);
+            $this->globals->pf4wp_js_log_flag = true;
         }
     }
 
@@ -1149,7 +1206,7 @@ class WordpressPlugin
      * @see _onActivation(), onActivation()
      * @internal
      */
-    public function _doOnActivation()
+    final public function _doOnActivation()
     {
         // Call user-defined event
         $this->onActivation();
@@ -1161,7 +1218,7 @@ class WordpressPlugin
      * @see _onDeactivation(), onDeactivation()
      * @internal
      */
-    public function _doOnDeactivation()
+    final public function _doOnDeactivation()
     {
         // Clear delayed notices
         $this->clearDelayedNotices();
@@ -1176,7 +1233,7 @@ class WordpressPlugin
      * @see _onUninstal(), onUninstall()
      * @internal
      */
-    public function _doOnUninstall()
+    final public function _doOnUninstall()
     {
         // Delete our options from the WP database
         $this->options->delete();
@@ -1385,17 +1442,20 @@ class WordpressPlugin
         if (!is_admin())
             return;
 
-        // Insert AJAX variables
-        $this->insertAjaxVars();
+        // Queue AJAX variables
+        $this->queueAjaxVars();
 
         // Insert remote JS console, if enabled
         $this->insertJSConsole();
 
-        // Insert the JS Log Flag, if enabled
-        $this->insertJSLogFlag();
+        // Queue the JS Log Flag, if enabled
+        $this->queueJSLogFlag();
 
         // Add user-defined Admin JS
         $this->onAdminScripts();
+
+        // Print JS Queue
+        $this->printJSQueue();
     }
 
     /**
@@ -1482,18 +1542,21 @@ class WordpressPlugin
     {
         if ($this->wasCalled('_onPublicScripts')) return; // Can only be called once!
 
-        // Insert AJAX variables, if enabled on public side
+        // Queue AJAX variables, if enabled on public side
         if ($this->public_ajax)
-            $this->insertAjaxVars();
+            $this->queueAjaxVars();
 
         // Insert remote JS console, if enabled
         $this->insertJSConsole();
 
-        // Insert the JS Log Flag, if enabled
-        $this->insertJSLogFlag();
+        // Queue the JS Log Flag, if enabled
+        $this->queueJSLogFlag();
 
         // Add user-defined public JS scripts
         $this->onPublicScripts();
+
+        // Print the JS queue
+        $this->printJSQueue();
     }
 
     /**
@@ -1596,7 +1659,7 @@ class WordpressPlugin
         echo apply_filters(
             'pf4wp_error_contactmsg_' . $this->getName(),
             sprintf(
-                '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
+                __('<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>', $this->getName()),
                 PluginInfo::getInfo(false, $this->getPluginBaseName(), 'AuthorURI'),
                 PluginInfo::getInfo(false, $this->getPluginBaseName(), 'Author'),
                 ($error_logged) ? ' or the logfile' : ''
@@ -1706,7 +1769,7 @@ class WordpressPlugin
                     $contact_msg = apply_filters(
                         'pf4wp_error_contactmsg_' . $pf4wp_instance->getName(),
                         sprintf(
-                            '<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>',
+                            __('<p>Please contact the plugin author <a href="%s" target="_blank">%s</a> with the above details%s if this problem persists.</p>', $pf4wp_instance->getName()),
                             PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'AuthorURI'),
                             PluginInfo::getInfo(false, $pf4wp_instance->getPluginBaseName(), 'Author'),
                             ($error_logged) ? ' or the logfile' : ''
@@ -1772,6 +1835,8 @@ class WordpressPlugin
 
     /**
      * Event called when a filter is requested during action registration
+     *
+     * Note: this is only available in the Admin/Dashboard
      *
      * @param string $filter Name of the filter
      * @api
@@ -1866,7 +1931,7 @@ class WordpressPlugin
     }
 
     /**
-     * Event triggered when a public facing side of the plugin is ready for initialization
+     * Event triggered when the administrative side of the plugin is ready for initialization
      *
      * This is a plugin-wide event. For page (screen) specific events, use onAdminLoad()
      *

@@ -431,4 +431,44 @@ class CachedArrayObject implements \ArrayAccess, \Countable, \Serializable, \Ite
 
         return isset($this->storage[$offset]) ? $this->storage[$offset] : null;
     }
+
+    /**
+     * Magic for setting a value
+     *
+     * @api
+     */
+    public function __set($offset, $value)
+    {
+        $this->offsetSet($offset, $value);
+    }
+
+    /**
+     * Magic for getting a value
+     *
+     * @api
+     */
+    public function __get($offset)
+    {
+        return $this->offsetGet($offset);
+    }
+
+    /**
+     * Magic for testing a value
+     *
+     * @api
+     */
+    public function __isset($offset)
+    {
+        return $this->offsetExists($offset);
+    }
+
+    /**
+     * Magic for unsetting a value
+     *
+     * @api
+     */
+    public function __unset($offset)
+    {
+        $this->offsetUnset($offset);
+    }
 }
