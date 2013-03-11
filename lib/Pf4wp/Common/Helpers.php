@@ -417,11 +417,9 @@ class Helpers
         }
 
         // As a last resort, use the file extension to match it up with a mime
-        $ext = pathinfo($file, PATHINFO_EXTENSION);
-        if (array_key_exists($ext, self::$mime_by_extension))
-            return self::$mime_by_extension[$ext];
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 
-        return $default_mime;
+        return (array_key_exists($ext, self::$mime_by_extension)) ? self::$mime_by_extension[$ext] : $default_mime;
     }
 
     /**
@@ -445,7 +443,7 @@ class Helpers
      */
     public static function embedDataUri($file, $mime = false, $force = false)
     {
-        $cache_id = 'pf4wp_' . md5($file) .  '_embed'; // 44 chars
+        $cache_id = 'pf4wp.' . md5($file) .  '.edu'; // 44 chars
 
         // Get from cache
         if (!$force && ($result = get_transient($cache_id)) !== false)
