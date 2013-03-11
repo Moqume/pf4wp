@@ -246,10 +246,8 @@ class CachedArrayObject extends AbstractArrayObject
      */
     protected function fetchCache($force = false)
     {
-        $time = microtime(true);
-
         // If the local storage is outdated...
-        if ($force === true || ($time - $this->storage_time) > $this->max_storage_age) {
+        if ($force === true || (microtime(true) - $this->storage_time) > $this->max_storage_age) {
             // Ensure a dirty cache is flushed
             $this->flushCache();
 
@@ -271,7 +269,7 @@ class CachedArrayObject extends AbstractArrayObject
             // Set local storage if the unserialized cache is in fact an array
             $this->storage = (is_array($cache)) ? $cache : array();
 
-            $this->storage_time = $time; // Invalidate
+            $this->storage_time = microtime(true); // Invalidate
         }
     }
 
@@ -287,10 +285,8 @@ class CachedArrayObject extends AbstractArrayObject
 
         $this->is_dirty = true; // Mark cache as dirty
 
-        $time = microtime(true); // Remember the time
-
         // If it is time to sync the local storage with cache, or forced...
-        if ($force === true || ($time - $this->storage_time) > $this->max_storage_age) {
+        if ($force === true || (microtime(true) - $this->storage_time) > $this->max_storage_age) {
             $data = serialize($this->storage);
 
             if (defined('PF4WP_APC') && PF4WP_APC === true) {
@@ -307,7 +303,7 @@ class CachedArrayObject extends AbstractArrayObject
             if ($success === true) {
                 $this->is_dirty = false;
 
-                $this->storage_time = $time; // Invalidate
+                $this->storage_time = microtime(true); // Invalidate
             } // else write to cache failed
         }
     }
@@ -383,15 +379,29 @@ class CachedArrayObject extends AbstractArrayObject
      */
     public function offsetSet($offset, $value)
     {
-        $this->fetchCache();
+        /* Because function calling inside loops is very expensive, we perform time checks
+         * here. This is the most expensive function (looped reads are generally handled by
+         * the ArrayIterator), and it saves about 150ms per 10,000 transactions.
+         */
+        $time = microtime(true);
 
+        // Check if its time to fetch the cache, instead of calling fetchCache immediately
+        if (($time - $this->storage_time) > $this->max_storage_age)
+            $this->fetchCache(true);
+
+        // Write changes to local storage (to cache is handled by fetch/setCache functions)
         if ($offset === null) {
             $this->storage[] = $value;
         } else {
             $this->storage[$offset] = $value;
         }
 
-        $this->setCache();
+        // Mark cache as dirty
+        $this->is_dirty = true;
+
+        // Check if its time to set the cache (storage_time may have changed at this point)
+        if (($time - $this->storage_time) > $this->max_storage_age)
+            $this->setCache(true);
     }
 
     /**
