@@ -230,7 +230,7 @@ class PluginInfo
         }
 
         // Return the contents of the specified field
-        if (!is_null($fieldname))
+        if ($fieldname !== null)
             return (array_key_exists($fieldname, $fields)) ? $fields[$fieldname] : '';
 
         // Return all the fields

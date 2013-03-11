@@ -25,15 +25,14 @@ use Pf4wp\Arrays\AbstractArrayObject;
  */
 class CachedArrayObject extends AbstractArrayObject
 {
-    const PERSIST_TEST_KEY = 'pf4wp_persist_test';
+    const PERSIST_TEST_KEY = 'pf4wp.persist_test.cao';
 
     /** Key and Group under which to store the cache
      * @internal
      */
     protected $key;
-    protected $wp_key;      // WP method
-    protected $int_key;     // Internal method
     protected $group;
+    protected $cache_key;
 
     /** The maximum age of a cached entry
      * @internal
@@ -76,28 +75,29 @@ class CachedArrayObject extends AbstractArrayObject
      */
     public function __construct($key, $group = 'pf4wp', $max_age = 0, $max_storage_age = 100)
     {
+        global $wp_object_cache;
         global $blog_id;
 
         $this->key   = $key;
         $this->group = $group;
 
-        // Helper to create the wp_key and int_key variables
-        $this->generateKeys();
+        // Helper to create the cache key
+        $this->generateCacheKey();
 
         $this->setMaxAge($max_age);
         $this->setMaxStorageAge($max_storage_age);
 
         // Generic persistence tests
         if (defined('PF4WP_APC') && PF4WP_APC === true) {
-            $this->can_persist = (apc_fetch(self::PERSIST_TEST_KEY) === true);
+            $this->can_persist = (apc_fetch(self::PERSIST_TEST_KEY) == self::PERSIST_TEST_KEY);
 
             if (!$this->can_persist)
-                apc_store(self::PERSIST_TEST_KEY, true);
+                apc_store(self::PERSIST_TEST_KEY, self::PERSIST_TEST_KEY);
         } else {
-            $this->can_persist = (wp_cache_get(self::PERSIST_TEST_KEY) === true);
+            $this->can_persist = (wp_cache_get(self::PERSIST_TEST_KEY, 'site-transient') == self::PERSIST_TEST_KEY);
 
             if (!$this->can_persist)
-                wp_cache_set(self::PERSIST_TEST_KEY, true);
+                wp_cache_set(self::PERSIST_TEST_KEY, self::PERSIST_TEST_KEY, 'site-transient');
         }
 
         // Ensure we're working with the correct cache on a MultiSite
@@ -128,7 +128,7 @@ class CachedArrayObject extends AbstractArrayObject
         $this->flushCache(true);
 
         // Update the keys with new blog ID
-        $this->generateKeys();
+        $this->generateCacheKey();
 
         // Fill storage with cache of new blog (forced)
         $this->fetchCache(true);
@@ -139,14 +139,12 @@ class CachedArrayObject extends AbstractArrayObject
      *
      * @internal
      */
-    protected function generateKeys()
+    protected function generateCacheKey()
     {
         global $blog_id;
 
-        $this->wp_key  = sprintf("%s_%d", $this->key, $blog_id);
-        $this->int_key = sprintf("pf4wp.%s.cao.%s.%d", md5($this->group), $this->key, $blog_id);
+        $this->cache_key = sprintf("pf4wp.%s.cao", md5($this->group . $this->key . $blog_id));
     }
-
 
     /**
      * Set the maximum age of the cache
@@ -251,21 +249,26 @@ class CachedArrayObject extends AbstractArrayObject
         $time = microtime(true);
 
         // If the local storage is outdated...
-        if (($time - $this->storage_time) > $this->max_storage_age || $force === true) {
+        if ($force === true || ($time - $this->storage_time) > $this->max_storage_age) {
             // Ensure a dirty cache is flushed
             $this->flushCache();
 
             if (defined('PF4WP_APC') && PF4WP_APC === true) {
                 // Use internal method
-                $cache = apc_fetch($this->int_key);
+                $cache = apc_fetch($this->cache_key);
 
                 if (extension_loaded('zlib') && $cache)
-                    $cache = @unserialize(gzinflate($cache));
+                    $cache = @gzinflate($cache);
             } else {
                 // Use WordPress' method (Memcache, W3 Total Cache, etc.)
-                $cache = wp_cache_get($this->wp_key, $this->group);
+                $cache = wp_cache_get($this->cache_key, 'transient');
             }
 
+            // Unserialize cache, if valid
+            if ($cache)
+                $cache = @unserialize($cache);
+
+            // Set local storage if the unserialized cache is in fact an array
             $this->storage = (is_array($cache)) ? $cache : array();
 
             $this->storage_time = $time; // Invalidate
@@ -280,23 +283,25 @@ class CachedArrayObject extends AbstractArrayObject
      */
     protected function setCache($force = false)
     {
+        global $wp_object_cache;
+
         $this->is_dirty = true; // Mark cache as dirty
 
         $time = microtime(true); // Remember the time
 
         // If it is time to sync the local storage with cache, or forced...
-        if (($time - $this->storage_time) > $this->max_storage_age || $force === true) {
-            // Write changes to cache
-            if (defined('PF4WP_APC') && PF4WP_APC === true) {
-                $data = $this->storage;
+        if ($force === true || ($time - $this->storage_time) > $this->max_storage_age) {
+            $data = serialize($this->storage);
 
+            if (defined('PF4WP_APC') && PF4WP_APC === true) {
                 // Compress the data, if possible (increases chance of storing large data at cost of a few ms)
                 if (extension_loaded('zlib'))
-                    $data = gzdeflate(serialize($data), 6);
+                    $data = gzdeflate($data, 6);
 
-                $success = apc_store($this->int_key, $data, $this->max_age);
+                $success = apc_store($this->cache_key, $data, $this->max_age);
             } else {
-                $success = wp_cache_set($this->wp_key, $this->storage, $this->group, $this->max_age);
+                // Note: W3TC Object Cache fails at __destruct, so we need to check the wp_object_cache first
+                $success = (isset($wp_object_cache)) ? wp_cache_set($this->cache_key, $data, 'transient', $this->max_age) : false;
             }
 
             if ($success === true) {
@@ -380,7 +385,7 @@ class CachedArrayObject extends AbstractArrayObject
     {
         $this->fetchCache();
 
-        if (is_null($offset)) {
+        if ($offset === null) {
             $this->storage[] = $value;
         } else {
             $this->storage[$offset] = $value;

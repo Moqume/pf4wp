@@ -85,7 +85,7 @@ class GlobalArrayObject extends AbstractArrayObject
      */
     public function offsetSet($offset, $value)
     {
-        if (is_null($offset)) {
+        if ($offset === null) {
             self::$globals[] = $value;
         } else {
             self::$globals[$offset] = $value;

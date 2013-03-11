@@ -1013,7 +1013,7 @@ class WordpressPlugin
         $link = sprintf('http://jsconsole.com/?%%3Alisten%%20%s', $uuid);
 
         // Return as HTML
-        if (!is_null($html)) {
+        if ($html !== null) {
             if (!is_string($html))
                 $html = $this->internal_options->remote_js_console;
 
@@ -1720,7 +1720,7 @@ class WordpressPlugin
         }
 
         // The plugin isn't a PF4WP instance, nothing for us to do
-        if (is_null($pf4wp_instance))
+        if (!isset($pf4wp_instance))
             return;
 
         $error_type = '';
