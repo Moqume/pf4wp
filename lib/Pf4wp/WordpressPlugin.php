@@ -1084,7 +1084,7 @@ class WordpressPlugin
         );
 
         // nonce vars
-        if (is_admin() || $this->verify_public_ajax) {
+        if (is_admin() || is_user_logged_in() || $this->verify_public_ajax) {
             $vars['nonce']         = wp_create_nonce($this->name . '-ajax-call');
             $vars['nonceresponse'] = wp_create_nonce($this->name . '-ajax-response');
         }
