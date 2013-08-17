@@ -6,8 +6,9 @@
  * file that was distributed with this source code.
  */
 
-/* PLEASE DO NOT DELETE THE FOLLOWING LINE AND LEAVE IT AT THE TOP: */
-if (!isset($_pf4wp_file) || array_shift(explode('/', str_replace('\\', '/', plugin_basename(dirname(__FILE__))))) != plugin_basename(dirname($_pf4wp_file))) die('Restricted Access');
+/* PLEASE DO NOT DELETE THE FOLLOWING TWO LINES AND LEAVE IT AT THE TOP: */
+$called_base_dir = explode('/', str_replace('\\', '/', plugin_basename(dirname(__FILE__))));
+if (!isset($_pf4wp_file) || array_shift($called_base_dir) != plugin_basename(dirname($_pf4wp_file))) die('Restricted Access');
 
 /**
  * This include file does a version check and creates an UCL instance.
@@ -104,7 +105,7 @@ $_pf4wp_ucl_class = '\\Symfony\\Component\\ClassLoader\\UniversalClassLoader';
 if (!class_exists($_pf4wp_ucl_class))
     require_once __DIR__.'/vendor/Symfony/Component/ClassLoader/UniversalClassLoader.php'; // Always include default UCL
 
-if ((defined('PF4WP_APC') && PF4WP_APC === true) || extension_loaded('apc')) {
+if ((defined('PF4WP_APC') && PF4WP_APC === true) || (extension_loaded('apc') && function_exists('apc_store'))) {
     // Set the PF4WP_APC to true, if not yet set
     if (!defined('PF4WP_APC'))
         define('PF4WP_APC', true);
@@ -143,4 +144,4 @@ $_pf4wp_check_pass = true;
 
 // Set the version
 if (!defined('PF4WP_VERSION'))
-    define('PF4WP_VERSION', '1.1');
+    define('PF4WP_VERSION', '1.1.2');
