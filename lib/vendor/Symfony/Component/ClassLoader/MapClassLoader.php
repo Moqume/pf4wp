@@ -47,12 +47,16 @@ class MapClassLoader
      */
     public function loadClass($class)
     {
+        if (class_exists($class)) {
+            return;
+        }
+
         if ('\\' === $class[0]) {
             $class = substr($class, 1);
         }
 
         if (isset($this->map[$class])) {
-            require $this->map[$class];
+            require_once $this->map[$class];
         }
     }
 

@@ -52,8 +52,12 @@ class DebugUniversalClassLoader extends UniversalClassLoader
      */
     public function loadClass($class)
     {
+        if (class_exists($class)) {
+            return;
+        }
+
         if ($file = $this->findFile($class)) {
-            require $file;
+            require_once $file;
 
             if (!class_exists($class, false) && !interface_exists($class, false) && (!function_exists('trait_exists') || !trait_exists($class, false))) {
                 throw new \RuntimeException(sprintf('The autoloader expected class "%s" to be defined in file "%s". The file was found but the class was not in it, the class name or namespace probably has a typo.', $class, $file));

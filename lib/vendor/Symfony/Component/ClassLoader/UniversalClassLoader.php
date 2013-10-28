@@ -225,8 +225,12 @@ class UniversalClassLoader
      */
     public function loadClass($class)
     {
+        if (class_exists($class)) {
+            return;
+        }
+
         if ($file = $this->findFile($class)) {
-            require $file;
+            require_once $file;
         }
     }
 
