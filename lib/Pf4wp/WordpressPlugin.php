@@ -1730,7 +1730,7 @@ class WordpressPlugin
             case E_ERROR             : $error_type = (empty($error_type)) ? 'E_ERROR'             : $error_type;    // no break - Irrecoverable, fatal error
             case E_USER_ERROR        : $error_type = (empty($error_type)) ? 'E_USER_ERROR'        : $error_type;    // no break - Irrecoverable, fatal error (user defined)
             case E_CORE_ERROR        : $error_type = (empty($error_type)) ? 'E_CORE_ERROR'        : $error_type;    // no break - Irrecoverable, fatal core error (PHP)
-            case E_COMPILE_ERROR     : $error_type = (empty($error_type)) ? 'E_COMPLE_ERROR'      : $error_type;    // no break - Irrecoverable, fatal compile-time error (Zend)
+            case E_COMPILE_ERROR     : $error_type = (empty($error_type)) ? 'E_COMPILE_ERROR'     : $error_type;    // no break - Irrecoverable, fatal compile-time error (Zend)
             case E_RECOVERABLE_ERROR : $error_type = (empty($error_type)) ? 'E_RECOVERABLE_ERROR' : $error_type;    // no break - Recoverable, considered fatal for now
                 $deactivated      = false;
                 $deactivated_msg  = '';
