@@ -73,7 +73,10 @@ class Cookies
 
         // Give it a domain, if none specified
         if ($domain === '') {
-            list($wc, $domain) = explode('.', $parsed_home_url['host'], 2); // Find the top-most part of the domain
+            // Extract the TLD, if possible
+            if (preg_match('/(\w+\.(\w{2,3}\.)?\w+)$/', $parsed_home_url['host'], $matches)) {
+                $domain = $matches[1];
+            }
 
             if (strpos($domain, '.') === false)
                 $domain = $parsed_home_url['host']; // top-most part should have at least one period (ie, no "com", "org" top-parts)
